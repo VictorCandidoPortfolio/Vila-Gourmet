@@ -1,0 +1,45 @@
+# Ambiente local: MySQL + API. O frontend roda à parte (npm run dev em ./frontend).
+#   docker compose up -d --build
+services:
+  db:
+    image: mysql:8.4
+    container_name: vila-gourmet-db
+    environment:
+      MYSQL_DATABASE: pizzaria
+      MYSQL_USER: ${DB_USER:-pizzaria}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-pizzaria}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      TZ: America/Sao_Paulo
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./backend
+    container_name: vila-gourmet-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: "jdbc:mysql://db:3306/pizzaria?useUnicode=true&characterEncoding=utf8&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true&useSSL=false"
+      DB_USER: ${DB_USER:-pizzaria}
+      DB_PASSWORD: ${DB_PASSWORD:-pizzaria}
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao-0123456789abcdef}
+      CORS_ORIGENS: ${CORS_ORIGENS:-http://localhost:5173}
+      CLOUDINARY_URL: ${CLOUDINARY_URL:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      CLOUDINARY_BASE_URL: ${CLOUDINARY_BASE_URL:-https://api.cloudinary.com}
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+volumes:
+  db-data:

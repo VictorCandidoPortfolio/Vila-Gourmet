@@ -1,0 +1,5 @@
+package com.vilagourmet.model.enums;
+
+public enum EstadoPedido {
+    AGUARDANDO_CONFIRMACAO, CONFIRMADO, EM_PREPARACAO, A_CAMINHO, PRONTO_PARA_RETIRADA, SERVIDO, CONCLUIDO, CANCELADO
+}

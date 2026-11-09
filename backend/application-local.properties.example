@@ -1,0 +1,22 @@
+# Copie este arquivo para "application-local.properties" (na pasta backend/) e preencha.
+# O application-local.properties é IGNORADO pelo git: é o lugar das credenciais da sua máquina.
+# Ele sobrescreve os valores do src/main/resources/application.properties. Reinicie a API depois de editar.
+
+# --- Cloudinary (fotos de produtos e insumos) ---
+# Opção 1: a URL completa do painel do Cloudinary (Settings > API Keys)
+#app.cloudinary.url=cloudinary://SUA_API_KEY:SEU_API_SECRET@SEU_CLOUD_NAME
+# Opção 2: os três valores separados
+#app.cloudinary.cloud-name=
+#app.cloudinary.api-key=
+#app.cloudinary.api-secret=
+# Pasta dentro da conta (padrão: vila-gourmet)
+#app.cloudinary.folder=vila-gourmet
+
+# --- Segurança ---
+# Troque em produção (mínimo 32 caracteres)
+#app.jwt.secret=
+
+# --- Banco de dados (os padrões já servem para o docker compose do projeto) ---
+#spring.datasource.url=jdbc:mysql://localhost:3307/pizzaria?useUnicode=true&characterEncoding=utf8&serverTimezone=America/Sao_Paulo&allowPublicKeyRetrieval=true&useSSL=false
+#spring.datasource.username=pizzaria
+#spring.datasource.password=pizzaria
