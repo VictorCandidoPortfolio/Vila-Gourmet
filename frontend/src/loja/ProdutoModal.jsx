@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { get, post } from '../api.js'
 import Icon from '../components/Icon.jsx'
+import EtapasMontagem from '../components/EtapasMontagem.jsx'
 import { useMontagem } from '../montagem.js'
 import { Erro, brl, useAcao } from '../ui.jsx'
 import { useCarrinho } from './carrinho.jsx'
@@ -28,22 +29,9 @@ export default function ProdutoModal({ produto, salvaId, onFechar }) {
   const [salvas, setSalvas] = useState([])
   const [nomeSalva, setNomeSalva] = useState('')
   const [salvou, setSalvou] = useState(false)
-  const [paginaGrupo, setPaginaGrupo] = useState(0)
   const acaoSalvar = useAcao()
   const m = useMontagem(produto, { aoAlterar: () => setSalvou(false) })
   const { grupos, adicionaisDisp, quantidade, opcoes, adicionais, selecao, cotacao, problema } = m
-  const paginas = [
-    ...grupos.map((grupo) => ({ id: `grupo-${grupo.id}`, tipo: 'grupo', grupo })),
-    ...(adicionaisDisp.length > 0 ? [{ id: 'adicionais', tipo: 'adicionais' }] : []),
-  ]
-  const paginaAtual = paginas[paginaGrupo] ?? paginas[0]
-  const grupoAtual = paginaAtual?.tipo === 'grupo' ? paginaAtual.grupo : null
-  const totalAtual = grupoAtual ? m.totalDoGrupo(grupoAtual) : 0
-  const escolhaUnica = grupoAtual?.maximo === 1
-
-  useEffect(() => {
-    setPaginaGrupo((atual) => Math.min(atual, Math.max(paginas.length - 1, 0)))
-  }, [paginas.length])
 
   // Pizzas salvas do cliente para este produto
   useEffect(() => {
@@ -102,52 +90,25 @@ export default function ProdutoModal({ produto, salvaId, onFechar }) {
               </label>
             )}
 
-            {paginas.length > 0 && (
-              <section className="lj-grupos-carrossel" aria-label="Opções do produto">
-                {paginas.length > 1 && (
-                  <nav className="lj-grupos-navegacao" aria-label="Navegar pelos grupos de opções">
-                    <button
-                      type="button"
-                      className="lj-grupo-seta"
-                      disabled={paginaGrupo === 0}
-                      onClick={() => setPaginaGrupo((pagina) => pagina - 1)}
-                      aria-label="Grupo anterior"
-                    >
-                      <span aria-hidden="true">‹</span>
-                    </button>
-                    <div className="lj-grupo-indicador" aria-live="polite">
-                      <small>Etapa {paginaGrupo + 1} de {paginas.length}</small>
-                      <strong>{grupoAtual?.nome ?? 'Adicionais'}</strong>
-                    </div>
-                    <button
-                      type="button"
-                      className="lj-grupo-seta"
-                      disabled={paginaGrupo === paginas.length - 1}
-                      onClick={() => setPaginaGrupo((pagina) => pagina + 1)}
-                      aria-label="Próximo grupo"
-                    >
-                      <span aria-hidden="true">›</span>
-                    </button>
-                  </nav>
-                )}
-
-                <div key={paginaAtual.id} className="lj-grupo-pagina">
-                  {grupoAtual && (
-                    <fieldset className="lj-grupo">
+            <EtapasMontagem key={produto.id} grupos={grupos} temAdicionais={adicionaisDisp.length > 0} renderGrupo={(grupoAtual) => {
+              const totalAtual = m.totalDoGrupo(grupoAtual)
+              const escolhaUnica = grupoAtual.maximo === 1
+              return (
+                <fieldset className="lj-grupo">
                   <legend>
-                        <strong>{grupoAtual.nome}</strong>
-                        <small className={totalAtual >= grupoAtual.minimo ? 'ok' : 'falta'}>
-                          {grupoAtual.maximo === grupoAtual.minimo ? `Escolha ${grupoAtual.minimo}` : `Escolha de ${grupoAtual.minimo} a ${grupoAtual.maximo}`}{grupoAtual.maximo > 1 && ` · ${totalAtual} selecionado${totalAtual === 1 ? '' : 's'}`}
+                    <strong>{grupoAtual.nome}</strong>
+                    <small className={totalAtual >= grupoAtual.minimo ? 'ok' : 'falta'}>
+                      {grupoAtual.maximo === grupoAtual.minimo ? `Escolha ${grupoAtual.minimo}` : `Escolha de ${grupoAtual.minimo} a ${grupoAtual.maximo}`}{grupoAtual.maximo > 1 && ` · ${totalAtual} selecionado${totalAtual === 1 ? '' : 's'}`}
                     </small>
                   </legend>
-                      {grupoAtual.opcoes.filter((o) => o.disponivel).map((o) => {
+                  {grupoAtual.opcoes.filter((o) => o.disponivel).map((o) => {
                     const q = opcoes[o.id] ?? 0
-                        const cobra = Number(o.preco) > 0 && grupoAtual.modalidadeCobranca !== 'GRATUITA'
+                    const cobra = Number(o.preco) > 0 && grupoAtual.modalidadeCobranca !== 'GRATUITA'
                     return (
                       <div key={o.id} className={`lj-opcao ${q > 0 ? 'marcada' : ''}`}>
-                            {escolhaUnica || o.maximo <= 1 ? (
-                              <button type="button" className="lj-opcao-btn" role={escolhaUnica ? 'radio' : 'checkbox'} aria-checked={q > 0} onClick={() => m.definir(grupoAtual, o, q > 0 ? 0 : 1)}>
-                                <span className={`lj-marca ${escolhaUnica ? 'redonda' : ''}`}>{q > 0 && <Icon nome="check" tamanho={14} />}</span>
+                        {escolhaUnica || o.maximo <= 1 ? (
+                          <button type="button" className="lj-opcao-btn" role={escolhaUnica ? 'radio' : 'checkbox'} aria-checked={q > 0} onClick={() => m.definir(grupoAtual, o, q > 0 ? 0 : 1)}>
+                            <span className={`lj-marca ${escolhaUnica ? 'redonda' : ''}`}>{q > 0 && <Icon nome="check" tamanho={14} />}</span>
                             <span className="lj-opcao-nome">{o.nome}</span>
                             {cobra && <span className="lj-opcao-preco">+ {brl(o.preco)}</span>}
                           </button>
@@ -157,40 +118,28 @@ export default function ProdutoModal({ produto, salvaId, onFechar }) {
                               <span className="lj-opcao-nome">{o.nome}</span>
                               {cobra && <span className="lj-opcao-preco">+ {brl(o.preco)}</span>}
                             </span>
-                                <Passo valor={q} max={o.maximo} aoMudar={(v) => m.definir(grupoAtual, o, v)} rotulo={o.nome} />
+                            <Passo valor={q} max={o.maximo} aoMudar={(v) => m.definir(grupoAtual, o, v)} rotulo={o.nome} />
                           </>
                         )}
                       </div>
                     )
                   })}
                 </fieldset>
-                  )}
-
-                  {paginaAtual.tipo === 'adicionais' && (
-                    <fieldset className="lj-grupo">
-                      <legend><strong>Adicionais</strong><small>opcional</small></legend>
-                      {adicionaisDisp.map((a) => (
-                        <div key={a.id} className={`lj-opcao ${(adicionais[a.id] ?? 0) > 0 ? 'marcada' : ''}`}>
-                          <span className="lj-opcao-btn estatico">
-                            <span className="lj-opcao-nome">{a.nome}</span>
-                            <span className="lj-opcao-preco">+ {brl(a.preco)}</span>
-                          </span>
-                          <Passo valor={adicionais[a.id] ?? 0} aoMudar={(v) => m.definirAdicional(a.id, v)} rotulo={a.nome} />
-                        </div>
-                      ))}
-                    </fieldset>
-                  )}
-                </div>
-
-                {paginas.length > 1 && (
-                  <div className="lj-grupo-pontos" aria-hidden="true">
-                    {paginas.map((pagina, indice) => (
-                      <span key={pagina.id} className={indice === paginaGrupo ? 'ativo' : ''} />
-                    ))}
+              )
+            }} renderAdicionais={() => (
+              <fieldset className="lj-grupo">
+                <legend><strong>Adicionais</strong><small>opcional</small></legend>
+                {adicionaisDisp.map((a) => (
+                  <div key={a.id} className={`lj-opcao ${(adicionais[a.id] ?? 0) > 0 ? 'marcada' : ''}`}>
+                    <span className="lj-opcao-btn estatico">
+                      <span className="lj-opcao-nome">{a.nome}</span>
+                      <span className="lj-opcao-preco">+ {brl(a.preco)}</span>
+                    </span>
+                    <Passo valor={adicionais[a.id] ?? 0} aoMudar={(v) => m.definirAdicional(a.id, v)} rotulo={a.nome} />
                   </div>
-                )}
-              </section>
-            )}
+                ))}
+              </fieldset>
+            )} />
 
             {cliente && grupos.length > 0 && (
               <div className="lj-salvar">

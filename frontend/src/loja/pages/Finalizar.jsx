@@ -105,11 +105,13 @@ export default function Finalizar() {
   const total = subtotal + (taxa ?? 0)
 
   const entregaPronta = efetiva !== 'ENTREGA' || (cliente && endereco && area?.atendida)
+  const mesaPronta = efetiva !== 'MESA' || (mesa && mesa.estado === 'ABERTA')
   const dadosPronto = efetiva === 'RETIRADA' ? nome.trim() && cpf.trim() : true
-  const podeEnviar = aberta && pronto && itens.length > 0 && entregaPronta && dadosPronto && !envio.ocupado
+  const podeEnviar = aberta && pronto && itens.length > 0 && entregaPronta && mesaPronta && dadosPronto && !envio.ocupado
 
   const enviar = (e) => {
     e.preventDefault()
+    if (!podeEnviar) return
     envio.executar(async () => {
       // Se algo venceu entre a revisão e o clique, cota de novo e deixa o cliente conferir.
       const { itens: atuais, mudancas: novas } = await revalidar()
@@ -117,7 +119,9 @@ export default function Finalizar() {
       const itensReq = atuais.map((i) => ({ ...i.selecao, cotacaoToken: i.cotacaoToken }))
       let resposta
       if (efetiva === 'MESA') {
-        resposta = await post(`/api/public/mesas/${mesa.codigo}/pedidos`, { cpfResponsavel: mesa.cpf, itens: itensReq, observacao: observacao || null }, { 'Idempotency-Key': chaveEnvio.current })
+        const codigo = encodeURIComponent(mesa.codigo)
+        const caminho = cliente ? `/api/cliente/mesa/${codigo}/pedidos` : `/api/public/mesas/${codigo}/pedidos`
+        resposta = await post(caminho, { ...(cliente ? {} : { cpfResponsavel: mesa.cpf }), itens: itensReq, observacao: observacao || null }, { 'Idempotency-Key': chaveEnvio.current })
       } else {
         resposta = await post('/api/public/pedidos', {
           modalidade: efetiva,
@@ -229,6 +233,9 @@ export default function Finalizar() {
             </section>
           )}
 
+          {efetiva === 'MESA' && !mesa && (
+            <p className="alerta aviso">Confira se há uma conta ativa na <Link to="/mesa">aba Mesa</Link>.</p>
+          )}
           {efetiva === 'MESA' && mesa && (
             <section className="lj-cartao">
               <h2>Pedido na mesa</h2>

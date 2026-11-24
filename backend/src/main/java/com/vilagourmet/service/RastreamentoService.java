@@ -66,7 +66,17 @@ public class RastreamentoService {
 
     @Transactional(readOnly = true)
     public RastreamentoResponse consultar(RastreamentoRequest req, String ip) {
-        Pedido p = localizar(req, ip);
+        return paraResponse(localizar(req, ip));
+    }
+
+    @Transactional(readOnly = true)
+    public RastreamentoResponse consultarDoCliente(Long pedidoId, Long clienteId) {
+        Pedido pedido = pedidos.findByIdAndClienteId(pedidoId, clienteId)
+                .orElseThrow(() -> new NaoEncontradoException("Pedido não encontrado"));
+        return paraResponse(pedido);
+    }
+
+    private RastreamentoResponse paraResponse(Pedido p) {
         List<Pagamento> lista = pagamentos.findByPedidoIdOrderByIdDesc(p.getId());
         String pagamento = lista.stream().anyMatch(x -> x.getEstado() == EstadoPagamento.CONFIRMADO) ? "PAGO" : "PENDENTE";
         return new RastreamentoResponse(p.getNumeroPedido(), p.getModalidade(), p.getEstado(), p.getTotal(), pagamento,

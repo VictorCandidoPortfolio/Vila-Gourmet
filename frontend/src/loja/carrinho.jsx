@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { post } from '../api.js'
+import { get, post } from '../api.js'
 import { corpoCotacao, resumoDoItem } from '../montagem.js'
+import { useCarga } from '../ui.jsx'
+import { useCliente } from './cliente.jsx'
 
 const CarrinhoContext = createContext(null)
 export const useCarrinho = () => useContext(CarrinhoContext)
@@ -29,14 +31,24 @@ const montarLinha = (selecao, cotacao) => ({
  */
 export function CarrinhoProvider({ children }) {
   const inicial = useMemo(ler, [])
+  const { cliente } = useCliente()
   const [itens, setItens] = useState(inicial.itens ?? [])
   const [modalidade, setModalidade] = useState(inicial.modalidade ?? null)
-  const [mesa, setMesa] = useState(inicial.mesa ?? null) // { codigo, cpf, nome }
+  const [mesaVisitante, setMesa] = useState(inicial.mesa ?? null)
   const [aberto, setAberto] = useState(false)
+  const consultaMesa = useCarga(async () => {
+    if (!cliente) return null
+    const conta = await get('/api/cliente/mesa')
+    return { cliente, conta }
+  }, [cliente], cliente ? 15000 : 0)
+  const conta = consultaMesa.dados?.cliente === cliente ? consultaMesa.dados?.conta : null
+  const mesa = cliente
+    ? conta && { codigo: conta.codigoConta, nome: conta.nomeResponsavel, estado: conta.estado }
+    : mesaVisitante
 
   useEffect(() => {
-    try { localStorage.setItem(CHAVE, JSON.stringify({ itens, modalidade, mesa })) } catch { /* sem armazenamento */ }
-  }, [itens, modalidade, mesa])
+    try { localStorage.setItem(CHAVE, JSON.stringify({ itens, modalidade, mesa: mesaVisitante })) } catch { /* sem armazenamento */ }
+  }, [itens, modalidade, mesaVisitante])
 
   const adicionar = useCallback((selecao, cotacao) => {
     setItens((atual) => [...atual, montarLinha(selecao, cotacao)])
@@ -77,6 +89,8 @@ export function CarrinhoProvider({ children }) {
 
   const valor = {
     itens, total, quantidadeTotal, modalidade, setModalidade, mesa, setMesa,
+    erroMesa: consultaMesa.erro, recarregarMesa: consultaMesa.recarregar,
+    carregandoMesa: !!cliente && !consultaMesa.erro && consultaMesa.dados?.cliente !== cliente,
     aberto, setAberto, adicionar, remover, limpar, alterarQuantidade, revalidar,
   }
   return <CarrinhoContext.Provider value={valor}>{children}</CarrinhoContext.Provider>

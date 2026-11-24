@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { get, post } from '../api.js'
 import { useAuth } from '../auth.jsx'
-import { Badge, Campo, Erro, brl, dataHora, rotulo, useAcao, useCarga } from '../ui.jsx'
+import { Badge, Campo, Erro, Modal, brl, dataHora, rotulo, useAcao, useCarga } from '../ui.jsx'
 import MontadorItem from '../components/MontadorItem.jsx'
 import PedidoDetalhe from '../components/PedidoDetalhe.jsx'
 
-function ContaDetalhe({ codigo, onAtualizou }) {
+const telaEstreita = '(max-width: 860px)'
+
+function ContaDetalhe({ codigo, onAtualizou, onFechar, mobile }) {
   const { pode } = useAuth()
-  const { dados: c, erro, recarregar } = useCarga(() => get(`/api/caixa/mesas/${codigo}`), [codigo], 15000)
+  const { dados: c, erro, carregando, recarregar } = useCarga(() => get(`/api/caixa/mesas/${codigo}`), [codigo], 15000)
   const acao = useAcao()
   const [novos, setNovos] = useState([])
   const [pedidoAberto, setPedidoAberto] = useState(null)
@@ -18,17 +20,16 @@ function ContaDetalhe({ codigo, onAtualizou }) {
 
   const rodar = (fn) => acao.executar(async () => { await fn(); await recarregar(); onAtualizou() })
 
-  if (!c) return <Erro erro={erro} />
-  const aberta = c.estado === 'ABERTA'
-  const fech = c.fechamento
-  const semConsumo = c.pedidos.every((p) => p.estado === 'CANCELADO')
+  const aberta = c?.estado === 'ABERTA'
+  const fech = c?.fechamento
+  const semConsumo = c?.pedidos.every((p) => p.estado === 'CANCELADO')
 
   const encerrarSemFechamento = () => {
     if (!window.confirm('Encerrar esta mesa sem fechamento e sem cobrança? Esta ação não reabre a conta.')) return
     rodar(() => post(`/api/caixa/mesas/${c.codigoConta}/encerrar-sem-fechamento`, { justificativa: motivoEncerramento.trim() }))
   }
 
-  return (
+  const conteudo = c ? (
     <section className="cartao">
       <div className="linha entre">
         <h2>Conta {c.codigoConta} <Badge valor={c.estado} /></h2>
@@ -133,8 +134,25 @@ function ContaDetalhe({ codigo, onAtualizou }) {
             {h.justificativa && <div className="pequeno mudo">“{h.justificativa}”</div>}</li>
         ))}
       </ul>
-      {pedidoAberto && <PedidoDetalhe id={pedidoAberto} onFechar={() => { setPedidoAberto(null); recarregar(); onAtualizou() }} />}
     </section>
+  ) : (
+    <>
+      {carregando && <p className="mudo" role="status">Carregando informações da mesa…</p>}
+      <Erro erro={erro} />
+    </>
+  )
+
+  return (
+    <>
+      {mobile ? (
+        <div className="mesa-detalhe-mobile">
+          <Modal titulo={`Detalhes da mesa ${codigo}`} onFechar={onFechar} semEsc={pedidoAberto !== null} largo>
+            {conteudo}
+          </Modal>
+        </div>
+      ) : conteudo}
+      {pedidoAberto && <PedidoDetalhe id={pedidoAberto} onFechar={() => { setPedidoAberto(null); recarregar(); onAtualizou() }} />}
+    </>
   )
 }
 
@@ -142,7 +160,16 @@ export default function Mesas() {
   const [estado, setEstado] = useState('')
   const [codigo, setCodigo] = useState('')
   const [busca, setBusca] = useState('')
+  const [mobile, setMobile] = useState(() => window.matchMedia(telaEstreita).matches)
   const { dados, erro, recarregar } = useCarga(() => get(`/api/caixa/mesas${estado ? `?estado=${estado}` : ''}`), [estado], 15000)
+
+  useEffect(() => {
+    const media = window.matchMedia(telaEstreita)
+    const atualizar = () => setMobile(media.matches)
+    media.addEventListener('change', atualizar)
+    atualizar()
+    return () => media.removeEventListener('change', atualizar)
+  }, [])
 
   return (
     <>
@@ -166,13 +193,19 @@ export default function Mesas() {
           <tbody>
             {dados?.map((c) => (
               <tr key={c.id} className={`clicavel ${c.codigoConta === codigo ? 'sel' : ''}`} onClick={() => setCodigo(c.codigoConta)}>
-                <td data-label="Código"><strong>{c.codigoConta}</strong></td><td data-label="Responsável">{c.nomeResponsavel}</td><td data-label="Estado"><Badge valor={c.estado} /></td><td data-label="Total">{brl(c.total)}</td>
+                <td data-label="Código">
+                  <button type="button" className="btn sec" onClick={(e) => { e.stopPropagation(); setCodigo(c.codigoConta) }}
+                    aria-label={`Abrir detalhes da mesa ${c.codigoConta}`}>{c.codigoConta}</button>
+                </td>
+                <td data-label="Responsável">{c.nomeResponsavel}</td><td data-label="Estado"><Badge valor={c.estado} /></td><td data-label="Total">{brl(c.total)}</td>
               </tr>
             ))}
             {dados?.length === 0 && <tr><td colSpan="4" className="mudo">Nenhuma conta.</td></tr>}
           </tbody>
         </table>
-        {codigo ? <ContaDetalhe key={codigo} codigo={codigo} onAtualizou={recarregar} /> : <p className="mudo">Selecione uma conta ou informe o código.</p>}
+        {codigo ? (
+          <ContaDetalhe key={codigo} codigo={codigo} onAtualizou={recarregar} onFechar={() => setCodigo('')} mobile={mobile} />
+        ) : !mobile && <p className="mudo">Selecione uma conta ou informe o código.</p>}
       </div>
     </>
   )

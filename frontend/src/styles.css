@@ -917,6 +917,10 @@ fieldset, fieldset.grupo { background: #0f1012; border-color: #2c2e33; }
   .painel.sem-padding:has(> table.tabela-mobile) { overflow: visible; background: transparent; border: 0; }
   .painel.sem-padding:has(> table.tabela-mobile) .paginacao { background: #131416; border: 1px solid var(--borda); border-radius: 14px; margin-top: .75rem; }
   .modal .rolagem { max-height: none; overflow: visible; padding-right: 0; }
+  .mesa-detalhe-mobile > .modal-fundo { align-items: flex-end; padding: 0; }
+  .mesa-detalhe-mobile .modal { margin: 0; }
+  .mesa-detalhe-mobile .modal-corpo { padding-bottom: max(.85rem, env(safe-area-inset-bottom)); }
+  .mesa-detalhe-mobile .modal-corpo > .cartao { margin: 0; min-width: 0; }
   .atalhos-dia { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: none; }
   .atalhos-dia::-webkit-scrollbar { display: none; }
   .atalhos-dia .btn { flex: none; }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { get, post } from '../api.js'
 import { Erro, brl, rotulo, useAcao, useCarga } from '../ui.jsx'
+import EtapasMontagem from './EtapasMontagem.jsx'
 
 /**
  * Monta um item a partir do catálogo publicado. O preço é sempre calculado pelo servidor
@@ -50,30 +51,33 @@ export default function MontadorItem({ onAdicionar }) {
         </label>
       </div>
 
-      {produto?.grupos.map((g) => (
-        <fieldset key={g.id}>
-          <legend>{g.nome} <small>({g.minimo}–{g.maximo} seleções · {rotulo(g.modalidadeCobranca)})</small></legend>
-          {g.opcoes.map((o) => (
-            <label key={o.id} className="opcao-linha">
-              <span>{o.nome} <small className="mudo">{brl(o.preco)}{o.minimo > 0 && ` · mín. ${o.minimo}`}</small></span>
-              <input type="number" min="0" max={o.maximo} value={opcoes[o.id] ?? 0}
-                onChange={(e) => { setOpcoes({ ...opcoes, [o.id]: Number(e.target.value) }); setCotacao(null) }} />
-            </label>
-          ))}
-        </fieldset>
-      ))}
-
-      {produto?.adicionais.length > 0 && (
-        <fieldset>
-          <legend>Adicionais</legend>
-          {produto.adicionais.map((a) => (
-            <label key={a.id} className="opcao-linha">
-              <span>{a.nome} <small className="mudo">{brl(a.preco)}</small></span>
-              <input type="number" min="0" value={adicionais[a.id] ?? 0}
-                onChange={(e) => { setAdicionais({ ...adicionais, [a.id]: Number(e.target.value) }); setCotacao(null) }} />
-            </label>
-          ))}
-        </fieldset>
+      {produto && (
+        <EtapasMontagem key={produto.id} grupos={produto.grupos} temAdicionais={produto.adicionais.length > 0}
+          renderGrupo={(g) => (
+            <fieldset>
+              <legend>{g.nome} <small>({g.minimo}–{g.maximo} seleções · {rotulo(g.modalidadeCobranca)})</small></legend>
+              {g.opcoes.map((o) => (
+                <label key={o.id} className="opcao-linha">
+                  <span>{o.nome} <small className="mudo">{brl(o.preco)}{o.minimo > 0 && ` · mín. ${o.minimo}`}</small></span>
+                  <input type="number" min="0" max={o.maximo} value={opcoes[o.id] ?? 0}
+                    onChange={(e) => { setOpcoes({ ...opcoes, [o.id]: Number(e.target.value) }); setCotacao(null) }} />
+                </label>
+              ))}
+            </fieldset>
+          )}
+          renderAdicionais={() => (
+            <fieldset>
+              <legend>Adicionais</legend>
+              {produto.adicionais.map((a) => (
+                <label key={a.id} className="opcao-linha">
+                  <span>{a.nome} <small className="mudo">{brl(a.preco)}</small></span>
+                  <input type="number" min="0" value={adicionais[a.id] ?? 0}
+                    onChange={(e) => { setAdicionais({ ...adicionais, [a.id]: Number(e.target.value) }); setCotacao(null) }} />
+                </label>
+              ))}
+            </fieldset>
+          )}
+        />
       )}
 
       <Erro erro={acao.erro} />

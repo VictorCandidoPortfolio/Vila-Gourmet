@@ -1,4 +1,5 @@
 import Icon from './Icon.jsx'
+import EtapasMontagem from './EtapasMontagem.jsx'
 import { useMontagem } from '../montagem.js'
 import { Modal, brl } from '../ui.jsx'
 
@@ -24,11 +25,11 @@ export default function PdvProdutoModal({ produto, onAdicionar, onFechar }) {
     <Modal titulo={produto.nome} onFechar={onFechar} largo>
       {produto.descricao && <p className="mudo">{produto.descricao}</p>}
 
-      {grupos.map((g) => {
+      <EtapasMontagem key={produto.id} grupos={grupos} temAdicionais={adicionaisDisp.length > 0} renderGrupo={(g) => {
         const n = m.totalDoGrupo(g)
         const unica = g.maximo === 1
         return (
-          <fieldset key={g.id} className="pdv-grupo">
+          <fieldset className="pdv-grupo">
             <legend>
               <strong>{g.nome}</strong>
               <small className={n >= g.minimo ? 'ok' : 'falta'}>
@@ -60,9 +61,7 @@ export default function PdvProdutoModal({ produto, onAdicionar, onFechar }) {
             })}
           </fieldset>
         )
-      })}
-
-      {adicionaisDisp.length > 0 && (
+      }} renderAdicionais={() => (
         <fieldset className="pdv-grupo">
           <legend><strong>Adicionais</strong><small>opcional</small></legend>
           {adicionaisDisp.map((a) => (
@@ -75,7 +74,7 @@ export default function PdvProdutoModal({ produto, onAdicionar, onFechar }) {
             </div>
           ))}
         </fieldset>
-      )}
+      )} />
 
       <div className="pdv-modal-base">
         <Passo valor={quantidade} min={1} aoMudar={m.setQuantidade} rotulo="Quantidade" />

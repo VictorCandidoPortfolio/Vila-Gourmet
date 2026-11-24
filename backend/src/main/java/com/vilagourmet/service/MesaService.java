@@ -11,6 +11,7 @@ import com.vilagourmet.dto.PedidoDTO.PedidoResponse;
 import com.vilagourmet.exception.NaoEncontradoException;
 import com.vilagourmet.exception.NegocioException;
 import com.vilagourmet.model.ContaMesa;
+import com.vilagourmet.model.Cliente;
 import com.vilagourmet.model.FechamentoMesa;
 import com.vilagourmet.model.HistoricoContaMesa;
 import com.vilagourmet.model.Pagamento;
@@ -20,6 +21,7 @@ import com.vilagourmet.model.enums.EstadoFechamento;
 import com.vilagourmet.model.enums.EstadoPagamento;
 import com.vilagourmet.model.enums.EstadoPedido;
 import com.vilagourmet.repository.ContaMesaRepository;
+import com.vilagourmet.repository.ClienteRepository;
 import com.vilagourmet.repository.FechamentoMesaRepository;
 import com.vilagourmet.repository.HistoricoContaMesaRepository;
 import com.vilagourmet.repository.PagamentoRepository;
@@ -32,6 +34,7 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -53,6 +56,7 @@ public class MesaService {
 
     private final SecureRandom random = new SecureRandom();
     private final ContaMesaRepository contas;
+    private final ClienteRepository clientes;
     private final HistoricoContaMesaRepository historicos;
     private final FechamentoMesaRepository fechamentos;
     private final PagamentoRepository pagamentos;
@@ -65,8 +69,9 @@ public class MesaService {
     public MesaService(ContaMesaRepository contas, HistoricoContaMesaRepository historicos,
                        FechamentoMesaRepository fechamentos, PagamentoRepository pagamentos, PedidoRepository pedidos,
                        PedidoService pedidoService, PedidoMapper mapper, RateLimiterService limiter,
-                       AberturaLojaService abertura) {
+                       AberturaLojaService abertura, ClienteRepository clientes) {
         this.contas = contas;
+        this.clientes = clientes;
         this.historicos = historicos;
         this.fechamentos = fechamentos;
         this.pagamentos = pagamentos;
@@ -80,16 +85,31 @@ public class MesaService {
     /** Qualquer pessoa pode iniciar o consumo, sem conta de cliente. */
     @Transactional
     public ContaMesaResponse abrir(AbrirMesaRequest req) {
+        return montar(abrirOnline(req.nome(), req.cpf()));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AcessoMesaResponse> mesaDoCliente(Long clienteId) {
+        return contaAtiva(cliente(clienteId).getCpf()).map(MesaService::resumo);
+    }
+
+    @Transactional
+    public AcessoMesaResponse abrirParaCliente(Long clienteId) {
+        Cliente cliente = cliente(clienteId);
+        return resumo(abrirOnline(cliente.getNome(), cliente.getCpf()));
+    }
+
+    private ContaMesa abrirOnline(String nome, String cpfInformado) {
         abertura.exigirVendasOnline();
-        String cpf = Cpf.exigirValido(req.cpf());
+        String cpf = Cpf.exigirValido(cpfInformado);
         exigirSemContaAtiva(cpf);
         ContaMesa c = new ContaMesa();
-        c.setNomeResponsavel(req.nome().trim());
+        c.setNomeResponsavel(nome.trim());
         c.setCpfResponsavel(cpf);
         c.setCodigoConta(gerarCodigo());
         salvarNovaConta(c);
         registrarHistorico(c.getId(), null, EstadoContaMesa.ABERTA, null, null);
-        return montar(c);
+        return c;
     }
 
     /** Recupera no aparelho uma conta ainda ativa usando o CPF do responsável. */
@@ -99,14 +119,34 @@ public class MesaService {
         String chaveLimite = "mesa-acesso:" + ip;
         limiter.exigirDisponivel(chaveLimite);
         String cpf = Cpf.normalizar(cpfInformado);
-        ContaMesa conta = cpf == null ? null
-                : contas.findFirstByCpfResponsavelAndEstadoInOrderByAbertaEmDesc(cpf, ESTADOS_ATIVOS).orElse(null);
+        ContaMesa conta = contaAtiva(cpf).orElse(null);
         if (conta == null) {
             limiter.registrarFalha(chaveLimite);
             throw new NaoEncontradoException("Não há conta de mesa ativa para este CPF");
         }
         limiter.limpar(chaveLimite);
+        return resumo(conta);
+    }
+
+    private Optional<ContaMesa> contaAtiva(String cpf) {
+        return cpf == null ? Optional.empty()
+                : contas.findFirstByCpfResponsavelAndEstadoInOrderByAbertaEmDesc(cpf, ESTADOS_ATIVOS);
+    }
+
+    private static AcessoMesaResponse resumo(ContaMesa conta) {
         return new AcessoMesaResponse(conta.getCodigoConta(), conta.getNomeResponsavel(), conta.getEstado());
+    }
+
+    private Cliente cliente(Long id) {
+        return clientes.findById(id).orElseThrow(() -> new NaoEncontradoException("Cliente não encontrado"));
+    }
+
+    @Transactional
+    public PedidoCriadoResponse pedidoDoCliente(Long clienteId, String codigo, MesaPedidoRequest req, String chave) {
+        abertura.exigirVendasOnline();
+        ContaMesa conta = contaAtiva(cliente(clienteId).getCpf()).filter(c -> c.getCodigoConta().equals(codigo))
+                .orElseThrow(() -> new NaoEncontradoException("Conta de mesa não encontrada"));
+        return pedidoService.criarParaMesa(conta, req.itens(), req.observacao(), chave);
     }
 
     /** Funcionário abre a conta de mesa no caixa: só o nome é obrigatório; CPF opcional. */
