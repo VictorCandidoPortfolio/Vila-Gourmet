@@ -48,17 +48,17 @@ export default function PedidosEntrega() {
       {carregando && !dados && <p>Carregando…</p>}
       {dados && (
         <section className="painel sem-padding">
-          <table>
+          <table className="tabela-mobile">
             <thead><tr><th>Pedido</th><th>Cliente</th><th>Endereço de entrega</th><th>Estado</th><th>Total</th><th>Pedido em</th></tr></thead>
             <tbody>
               {dados.linhas.map((p) => (
                 <tr key={p.id} className="clicavel" onClick={() => setAberto(p.id)}>
-                  <td><strong>{p.numeroPedido}</strong></td>
-                  <td>{p.nomeResponsavel}</td>
-                  <td><Endereco e={p.endereco} /></td>
-                  <td><Badge valor={p.estado} /></td>
-                  <td>{brl(p.total)}</td>
-                  <td>{dataHora(p.criadoEm)}</td>
+                  <td data-label="Pedido"><strong>{p.numeroPedido}</strong></td>
+                  <td data-label="Cliente">{p.nomeResponsavel}</td>
+                  <td data-label="Endereço"><Endereco e={p.endereco} /></td>
+                  <td data-label="Estado"><Badge valor={p.estado} /></td>
+                  <td data-label="Total">{brl(p.total)}</td>
+                  <td data-label="Pedido em">{dataHora(p.criadoEm)}</td>
                 </tr>
               ))}
               {dados.linhas.length === 0 && <tr><td colSpan="6" className="mudo">Nenhuma entrega em andamento.</td></tr>}

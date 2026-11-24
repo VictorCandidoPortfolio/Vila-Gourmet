@@ -236,7 +236,7 @@ check("recebido separado do vendido", rel["totalRecebido"] == 107.5 + 34, rel["t
 print("== frente de caixa e histórico")
 s, cot = call("POST", "/api/public/cotacoes", {"produtoId": simples["id"], "quantidade": 1}, esperado=200)
 item_cx = {"cotacaoToken": cot["cotacaoToken"]}
-s, r1 = call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "RETIRADA", "itens": [item_cx], "nomeResponsavel": "Cliente do Balcão"}, adm, esperado=201)
+s, r1 = call("POST", "/api/caixa/pedidos", {"modalidade": "RETIRADA", "itens": [item_cx], "nomeResponsavel": "Cliente do Balcão"}, adm, esperado=201)
 check("retirada lançada no caixa só com o nome", r1["pedido"]["modalidade"] == "RETIRADA" and r1["pedido"].get("cpfResponsavel") is None and r1["codigoConfirmacao"], r1)
 call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "RETIRADA", "itens": [item_cx]}, adm, esperado=422)  # sem nome
 call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "RETIRADA", "itens": [item_cx], "nomeResponsavel": "X", "cpfResponsavel": "11111111111"}, adm, esperado=422)  # CPF, se informado, precisa ser válido
@@ -246,14 +246,14 @@ check("entrega lançada no caixa sem cadastro de cliente", ent["pedido"]["taxaEn
 call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "ENTREGA", "itens": [item_cx], "nomeResponsavel": "Fulano", "endereco": {**end_cx, "bairro": "Longe"}}, adm, esperado=422)  # fora da área
 call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "ENTREGA", "itens": [item_cx], "nomeResponsavel": "Fulano"}, adm, esperado=422)  # sem endereço
 call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "ENTREGA", "itens": [item_cx], "nomeResponsavel": "Fulano", "endereco": {**end_cx, "cep": "123"}}, adm, esperado=422)
-s, mc = call("POST", "/api/gestao/caixa/mesas", {"nome": "Mesa do Balcão"}, adm, esperado=201)
+s, mc = call("POST", "/api/caixa/contas-mesa", {"nome": "Mesa do Balcão"}, adm, esperado=201)
 check("conta de mesa aberta só com o nome", mc.get("cpfResponsavel") is None and mc["estado"] == "ABERTA", mc)
 call("POST", f"/api/public/mesas/{mc['codigoConta']}/pedidos", {"cpfResponsavel": "52998224725", "itens": [item_cx]}, esperado=404)  # visitante não entra em conta sem CPF
 s, rm = call("POST", "/api/gestao/caixa/pedidos", {"modalidade": "MESA", "itens": [item_cx], "codigoConta": mc["codigoConta"]}, adm, esperado=201)
 check("pedido de mesa lançado no caixa", rm["pedido"]["modalidade"] == "MESA", rm)
 s, eu = call("GET", "/api/gestao/eu", token=adm, esperado=200)
 check("sessão do funcionário traz as permissões atuais", "CAIXA_OPERAR" in eu["permissoes"] and eu["nome"] == "Admin Teste", eu)
-s, abertas = call("GET", "/api/gestao/caixa/mesas", token=adm, esperado=200)
+s, abertas = call("GET", "/api/caixa/contas-mesa", token=adm, esperado=200)
 check("conta de mesa aparece entre as abertas", any(c["codigoConta"] == mc["codigoConta"] for c in abertas), abertas)
 
 s, andamento = call("GET", "/api/gestao/pedidos?situacao=ANDAMENTO&tamanho=100", token=adm, esperado=200)
@@ -268,7 +268,8 @@ s, h_ontem = call("GET", f"/api/gestao/pedidos?situacao=FINALIZADOS&de={ontem}&a
 check("filtro de dia: hoje traz o histórico e ontem vem vazio", len(h_hoje["content"]) == len(final["content"]) and len(h_ontem["content"]) == 0, (len(h_hoje["content"]), len(h_ontem["content"])))
 
 print("== fechamento do caixa")
-s, cx = call("GET", "/api/gestao/caixa", token=adm, esperado=200)
+s, cx = call("GET", "/api/caixa", token=adm, esperado=200)
+caixa_id = cx["caixaId"]
 check("caixa mostra os pedidos em aberto", cx["pedidosEmAberto"] == len(andamento["content"]) and cx["bloqueios"] == [], cx)
 s, aviso = call("POST", "/api/gestao/caixa/fechar", {}, adm, esperado=409)
 check("fechar com pedidos em aberto avisa que serão cancelados", "serão cancelados" in aviso["mensagem"] and len(aviso["detalhes"]) == cx["pedidosEmAberto"], aviso)
@@ -282,6 +283,15 @@ s, pc = call("GET", f"/api/gestao/mesas/{mc['codigoConta']}", token=adm, esperad
 check("conta de mesa aberta foi encerrada sem cobrança", pc["estado"] == "ENCERRADA" and pc["pedidos"][0]["estado"] == "CANCELADO", pc["estado"])
 s, st = call("GET", "/api/public/loja/status", esperado=200)
 check("loja fechada depois do fechamento", st["aberta"] is False, st)
+s, sessoes = call("GET", "/api/caixa/historico", token=adm, esperado=200)
+check("histórico agrupa vendas pela sessão", any(c["id"] == caixa_id and c["fechadoEm"] and c["quantidadeVendas"] >= 3 for c in sessoes), sessoes)
+s, sessao = call("GET", f"/api/caixa/historico/{caixa_id}", token=adm, esperado=200)
+check("detalhe do caixa contém as vendas do período", any(v["id"] == r1["pedido"]["id"] for v in sessao["vendas"]), sessao)
+s, corrigida = call("PUT", f"/api/caixa/pedidos/{r1['pedido']['id']}", {"nomeResponsavel": "Cliente corrigido", "observacao": "Correção do balcão", "justificativa": "Nome informado incorretamente"}, adm, esperado=200)
+check("venda do histórico pode ser corrigida com auditoria", corrigida["nomeResponsavel"] == "Cliente corrigido" and corrigida["ultimaEdicaoCaixaEm"] and len(corrigida["edicoesCaixa"]) == 1, corrigida)
+s, reaberto = call("POST", f"/api/caixa/historico/{caixa_id}/reabrir", token=adm, esperado=200)
+check("sessão fechada pode ser reaberta pelo histórico", reaberto["aberto"] is True and reaberto["caixaId"] == caixa_id, reaberto)
+call("POST", "/api/caixa/fechar", {}, adm, esperado=200)
 s, cot2 = call("POST", "/api/public/cotacoes", {"produtoId": simples["id"], "quantidade": 1}, esperado=200)
 call("POST", "/api/public/pedidos", {"modalidade": "RETIRADA", "itens": [{"cotacaoToken": cot2["cotacaoToken"]}], "nomeResponsavel": "Fora do horário", "cpfResponsavel": "52998224725"}, esperado=409)
 call("POST", "/api/public/pedidos", {**ped_body, "itens": [{"cotacaoToken": cot2["cotacaoToken"]}]}, cli, esperado=409)

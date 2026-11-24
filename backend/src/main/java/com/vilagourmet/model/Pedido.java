@@ -25,6 +25,9 @@ public class Pedido extends EntidadeBase {
 
     private Long contaMesaId;
 
+    /** Sessão de caixa ativa quando a venda foi criada, inclusive para pedidos da loja. */
+    private Long caixaId;
+
     @Enumerated(EnumType.STRING)
     private Modalidade modalidade;
 
@@ -62,6 +65,12 @@ public class Pedido extends EntidadeBase {
     private LocalDateTime confirmadoEm;
 
     private LocalDateTime atualizadoEm = LocalDateTime.now();
+
+    private LocalDateTime ultimaEdicaoCaixaEm;
+
+    private Long ultimaEdicaoCaixaPor;
+
+    private String justificativaUltimaEdicao;
 
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemPedido> itens = new ArrayList<>();

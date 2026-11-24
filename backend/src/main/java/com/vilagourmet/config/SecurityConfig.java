@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/api/public/**", "/api/auth/**", "/error").permitAll()
                         .requestMatchers("/api/cliente/**").hasRole("CLIENTE")
+                        .requestMatchers("/api/caixa/**").hasRole("FUNCIONARIO")
                         // permissões finas são verificadas por @PreAuthorize nos controllers de gestão
                         .requestMatchers("/api/gestao/**").hasRole("FUNCIONARIO")
                         .anyRequest().denyAll())

@@ -27,17 +27,17 @@ export default function Cancelamentos() {
         </label>
       </div>
       <Erro erro={erro} /><Erro erro={acao.erro} />
-      <table>
+      <table className="tabela-mobile">
         <thead><tr><th>Pedido</th><th>Solicitante</th><th>Solicitado em</th><th>Estado do pedido</th><th>Situação</th><th>Decisão</th></tr></thead>
         <tbody>
           {dados?.map((c) => (
             <tr key={c.id}>
-              <td><strong>{c.numeroPedido}</strong></td>
-              <td>{rotulo(c.solicitadoPor)}</td>
-              <td>{dataHora(c.solicitadoEm)}</td>
-              <td><Badge valor={c.estadoPedido} /></td>
-              <td><Badge valor={c.estado} />{c.justificativa && <div className="pequeno mudo">{c.justificativa}</div>}</td>
-              <td>
+              <td data-label="Pedido"><strong>{c.numeroPedido}</strong></td>
+              <td data-label="Solicitante">{rotulo(c.solicitadoPor)}</td>
+              <td data-label="Solicitado em">{dataHora(c.solicitadoEm)}</td>
+              <td data-label="Estado do pedido"><Badge valor={c.estadoPedido} /></td>
+              <td data-label="Situação"><Badge valor={c.estado} />{c.justificativa && <div className="pequeno mudo">{c.justificativa}</div>}</td>
+              <td data-label="Decisão">
                 {c.estado === 'PENDENTE' && (
                   <div className="linha">
                     <input placeholder="Justificativa (obrigatória para rejeitar)" value={justificativas[c.id] ?? ''}

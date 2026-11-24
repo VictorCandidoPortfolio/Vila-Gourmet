@@ -96,15 +96,15 @@ function Produtos({ categorias, aoCriarCategoria, aoCadastrarInsumo }) {
         </p>
       )}
       <div className="tabela-rolavel">
-      <table>
+      <table className="tabela-mobile">
         <thead><tr><th>Produto</th><th>Categoria</th><th>Tipo</th><th>Preço</th><th>Status</th><th>Situação</th><th /></tr></thead>
         <tbody>
           {lista.map((p) => (
             <tr key={p.id} className={`clicavel ${p.disponivel ? '' : 'inativo'}`} onClick={() => setEditando(p.id)}>
-              <td><span className="produto-celula"><span className="miniatura">{p.imagemUrl ? <img src={miniatura(p.imagemUrl)} alt="" loading="lazy" /> : <Icon nome="pizza" tamanho={18} />}</span><strong>{p.nome}</strong></span></td><td>{p.categoriaNome}</td>
-              <td>{rotulo(p.tipo)}{p.estrategia && <small className="mudo"> · {rotulo(p.estrategia)}</small>}</td><td>{brl(p.precoBase)}</td>
-              <td><Badge valor={p.status} /></td>
-              <td><Chave ligado={p.disponivel} desabilitado={acao.ocupado} aoAlterar={(v) => alternar(p, v)} rotulo={p.disponivel ? 'Ativo' : 'Inativo'} /></td>
+              <td data-label="Produto"><span className="produto-celula"><span className="miniatura">{p.imagemUrl ? <img src={miniatura(p.imagemUrl)} alt="" loading="lazy" /> : <Icon nome="pizza" tamanho={18} />}</span><strong>{p.nome}</strong></span></td><td data-label="Categoria">{p.categoriaNome}</td>
+              <td data-label="Tipo">{rotulo(p.tipo)}{p.estrategia && <small className="mudo"> · {rotulo(p.estrategia)}</small>}</td><td data-label="Preço">{brl(p.precoBase)}</td>
+              <td data-label="Status"><Badge valor={p.status} /></td>
+              <td data-label="Disponibilidade"><Chave ligado={p.disponivel} desabilitado={acao.ocupado} aoAlterar={(v) => alternar(p, v)} rotulo={p.disponivel ? 'Ativo' : 'Inativo'} /></td>
               <td className="acoes-linha">
                 <MenuAcoes desabilitado={acao.ocupado} rotulo={`Ações de ${p.nome}`}
                   itens={[{ texto: 'Editar', aoClicar: () => setEditando(p.id) }, { texto: 'Excluir', perigo: true, aoClicar: () => excluir(p) }]} />

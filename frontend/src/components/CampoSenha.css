@@ -1,0 +1,24 @@
+.campo-senha { gap: .3rem; }
+.campo-senha > label { color: var(--mudo); }
+.campo-senha-controle { position: relative; }
+.campo-senha-controle input { width: 100%; padding-right: 3rem; }
+.campo-senha-olho { position: absolute; top: 50%; right: .25rem; transform: translateY(-50%); width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--mudo); cursor: pointer; }
+.campo-senha-olho:hover { color: var(--texto); background: rgba(128, 100, 70, .08); }
+.campo-senha-olho:focus-visible { outline: 2px solid var(--dourado); outline-offset: 1px; }
+.senha-ajuda { padding: .35rem .15rem 0; color: var(--mudo); font-size: .78rem; }
+.senha-ajuda > span { font-weight: 600; }
+.senha-ajuda ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .18rem .8rem; list-style: none; padding: 0; margin: .35rem 0; }
+.senha-ajuda li { display: flex; align-items: center; gap: .35rem; line-height: 1.3; }
+.senha-ajuda li > span { width: 1rem; text-align: center; font-weight: 800; }
+.senha-ajuda li.atendido { color: var(--ok); }
+.senha-forca { margin-top: .3rem; padding-top: .35rem; border-top: 1px solid var(--borda); }
+.senha-forca.fraca strong { color: var(--mudo); }
+.senha-forca.razoavel strong { color: var(--aviso, var(--dourado-escuro)); }
+.senha-forca.forte strong { color: var(--ok); }
+.campo-senha-invalida input { border-color: var(--vermelho); }
+.campo-senha-erro { color: var(--vermelho-escuro); font-size: .78rem; }
+
+@media (max-width: 520px) {
+  .senha-ajuda ul { grid-template-columns: 1fr; }
+  .campo-senha-olho { width: 2.5rem; height: 2.5rem; right: 0; }
+}

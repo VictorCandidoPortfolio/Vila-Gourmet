@@ -9,13 +9,13 @@ import { Erro, Modal, brl, dataHora, useAcao, useCarga } from '../ui.jsx'
 const semAcento = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
 /** Aviso antes de fechar: pedidos não concluídos serão cancelados, e há casos que impedem o fechamento. */
-function FecharCaixa({ status, onFechar, onFechado }) {
+export function FecharCaixa({ status, onFechar, onFechado }) {
   const acao = useAcao()
   const bloqueado = status.bloqueios.length > 0
   const comPedidos = status.pedidosEmAberto > 0
 
   const fechar = () => acao.executar(async () => {
-    const r = await post('/api/gestao/caixa/fechar', { confirmarCancelamentos: comPedidos })
+    const r = await post('/api/caixa/fechar', { confirmarCancelamentos: comPedidos })
     onFechado(r)
   })
 
@@ -91,9 +91,11 @@ function Produtos({ aoEscolher }) {
 function FrenteDeCaixa({ status, aoMudar }) {
   const [itens, setItens] = useState([])
   const [produto, setProduto] = useState(null)
+  const [pedidoMobile, setPedidoMobile] = useState(false)
   const [lancado, setLancado] = useState(null)
   const [fechando, setFechando] = useState(false)
   const [resultado, setResultado] = useState(null)
+  const subtotal = itens.reduce((s, i) => s + Number(i.subtotal), 0)
 
   const adicionar = (selecao, cotacao) => {
     setItens((l) => [...l, {
@@ -116,8 +118,16 @@ function FrenteDeCaixa({ status, aoMudar }) {
 
       <div className="pdv">
         <Produtos aoEscolher={setProduto} />
-        <PdvPedido itens={itens} setItens={setItens} onLancado={(r) => { setItens([]); setLancado(r); aoMudar() }} />
+        {pedidoMobile && <button className="pdv-pedido-overlay" aria-label="Fechar pedido" onClick={() => setPedidoMobile(false)} />}
+        <PdvPedido itens={itens} setItens={setItens} mobileAberto={pedidoMobile} onFecharMobile={() => setPedidoMobile(false)}
+          onLancado={(r) => { setItens([]); setPedidoMobile(false); setLancado(r); aoMudar() }} />
       </div>
+
+      <button className="pdv-pedido-mobile-bar" onClick={() => setPedidoMobile(true)} aria-label={`Ver pedido com ${itens.length} itens`}>
+        <span><strong>{itens.length}</strong> {itens.length === 1 ? 'item' : 'itens'}</span>
+        <span className="pdv-mobile-total">{brl(subtotal)}</span>
+        <span>Ver pedido</span>
+      </button>
 
       {produto && <PdvProdutoModal produto={produto} onAdicionar={adicionar} onFechar={() => setProduto(null)} />}
       {lancado && <PedidoLancado resposta={lancado} onFechar={() => setLancado(null)} />}
@@ -132,7 +142,7 @@ function FrenteDeCaixa({ status, aoMudar }) {
 }
 
 export default function Caixa() {
-  const { dados: status, erro, carregando, recarregar } = useCarga(() => get('/api/gestao/caixa'), [], 15000)
+  const { dados: status, erro, carregando, recarregar } = useCarga(() => get('/api/caixa'), [], 15000)
   const abrir = useAcao()
 
   return (
@@ -146,7 +156,7 @@ export default function Caixa() {
           <h2>A pizzaria está fechada</h2>
           <p className="mudo">Com o caixa fechado não é possível realizar vendas, nem aqui nem pela loja do cliente. Abra o caixa para começar a lançar pedidos e liberar os pedidos online.</p>
           <Erro erro={abrir.erro} />
-          <button className="btn" disabled={abrir.ocupado} onClick={() => abrir.executar(async () => { await post('/api/gestao/caixa/abrir'); await recarregar() })}>
+          <button className="btn" disabled={abrir.ocupado} onClick={() => abrir.executar(async () => { await post('/api/caixa/abrir'); await recarregar() })}>
             {abrir.ocupado ? 'Abrindo…' : 'Abrir caixa'}
           </button>
         </section>

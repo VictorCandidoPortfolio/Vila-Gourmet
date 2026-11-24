@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Pergunta única: a pizzaria está aberta? Só há vendas (loja, mesa e frente de caixa) com um caixa aberto.
- * Fica separado do {@link CaixaService} para que pedidos e mesas possam consultá-lo sem dependência circular.
+ * Estado operacional do caixa e disponibilidade independente da loja pública.
  */
 @Service
 public class AberturaLojaService {
@@ -32,9 +31,21 @@ public class AberturaLojaService {
     }
 
     @Transactional(readOnly = true)
-    public void exigirAberta() {
+    public boolean vendasOnlineDisponiveis() {
+        return caixaAberto().map(Caixa::isVendasOnline).orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public void exigirCaixaAberto() {
         if (!aberta()) {
             throw new NegocioException(HttpStatus.CONFLICT, "A pizzaria está fechada no momento. Não é possível realizar vendas.");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public void exigirVendasOnline() {
+        if (!vendasOnlineDisponiveis()) {
+            throw new NegocioException(HttpStatus.CONFLICT, "As vendas pelo site estão indisponíveis no momento.");
         }
     }
 }

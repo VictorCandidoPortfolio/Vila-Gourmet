@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Campo, Erro, useAcao } from '../../ui.jsx'
+import CampoSenha, { senhaValida } from '../../components/CampoSenha.jsx'
 import { useCliente } from '../cliente.jsx'
 
 export default function Entrar() {
@@ -10,6 +11,7 @@ export default function Entrar() {
   const volta = params.get('volta') ?? '/conta'
   const [cadastro, setCadastro] = useState(params.get('modo') === 'cadastro')
   const [f, setF] = useState({ nome: '', cpf: '', email: '', login: '', senha: '' })
+  const [tentouEnviar, setTentouEnviar] = useState(false)
   const { erro, ocupado, executar } = useAcao()
   const campo = (k) => ({ value: f[k], onChange: (e) => setF({ ...f, [k]: e.target.value }) })
 
@@ -17,6 +19,9 @@ export default function Entrar() {
 
   const enviar = (e) => {
     e.preventDefault()
+    setTentouEnviar(true)
+    if (!e.currentTarget.checkValidity()) { e.currentTarget.reportValidity(); return }
+    if (cadastro && !senhaValida(f.senha)) return
     executar(async () => {
       if (cadastro) await cadastrar({ nome: f.nome.trim(), cpf: f.cpf, email: f.email.trim(), senha: f.senha })
       else await entrar(f.login.trim(), f.senha)
@@ -26,7 +31,7 @@ export default function Entrar() {
 
   return (
     <div className="lj-pagina estreita">
-      <form className="lj-cartao" onSubmit={enviar}>
+      <form className="lj-cartao" onSubmit={enviar} noValidate>
         <div className="lj-abas" role="tablist">
           <button type="button" role="tab" aria-selected={!cadastro} className={!cadastro ? 'ativo' : ''} onClick={() => setCadastro(false)}>Entrar</button>
           <button type="button" role="tab" aria-selected={cadastro} className={cadastro ? 'ativo' : ''} onClick={() => setCadastro(true)}>Criar conta</button>
@@ -45,9 +50,8 @@ export default function Entrar() {
         ) : (
           <Campo label="E-mail ou CPF"><input {...campo('login')} required autoComplete="username" autoFocus placeholder="voce@email.com ou 000.000.000-00" /></Campo>
         )}
-        <Campo label="Senha" dica={cadastro ? 'Mínimo de 8 caracteres.' : undefined}>
-          <input type="password" {...campo('senha')} required minLength={cadastro ? 8 : undefined} autoComplete={cadastro ? 'new-password' : 'current-password'} />
-        </Campo>
+        <CampoSenha value={f.senha} onChange={(e) => setF({ ...f, senha: e.target.value })} required politica={cadastro}
+          mostrarErro={cadastro && tentouEnviar} autoComplete={cadastro ? 'new-password' : 'current-password'} />
         <Erro erro={erro} />
         <button className="btn grande" disabled={ocupado}>{ocupado ? 'Aguarde…' : cadastro ? 'Criar conta' : 'Entrar'}</button>
         <p className="mudo pequeno lj-centro">Para retirada ou mesa não é preciso ter conta.</p>

@@ -78,17 +78,17 @@ export default function PedidoDetalhe({ id, onFechar }) {
       )}
 
       {abaAtiva === 'itens' && (
-        <table>
+        <table className="tabela-mobile tabela-itens">
           <thead><tr><th>Item</th><th>Qtd</th><th>Unitário</th><th>Subtotal</th></tr></thead>
           <tbody>
             {p.itens.map((i, k) => (
               <tr key={k}>
-                <td>
+                <td data-label="Item">
                   <strong>{i.nomeProduto}</strong>
                   {i.escolhas.map((e, j) => <div key={j} className="pequeno mudo">{e.quantidade}x {e.opcao} <em>({e.grupo} · {rotulo(e.modalidadeCobranca)})</em></div>)}
                   {i.adicionais.map((a, j) => <div key={j} className="pequeno mudo">+ {a.quantidade}x {a.nome} ({brl(a.subtotal)})</div>)}
                 </td>
-                <td>{i.quantidade}</td><td>{brl(i.precoUnitario)}</td><td>{brl(i.subtotal)}</td>
+                <td data-label="Quantidade">{i.quantidade}</td><td data-label="Unitário">{brl(i.precoUnitario)}</td><td data-label="Subtotal">{brl(i.subtotal)}</td>
               </tr>
             ))}
           </tbody>

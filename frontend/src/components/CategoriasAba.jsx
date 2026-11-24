@@ -57,13 +57,13 @@ export default function CategoriasAba({ aoMudar }) {
       <div className="linha entre"><h2>Categorias</h2><button className="btn" onClick={() => setEditando(null)}>+ Nova categoria</button></div>
       <Erro erro={erro} /><Erro erro={acao.erro} />
       <div className="tabela-rolavel">
-        <table>
+        <table className="tabela-mobile">
           <thead><tr><th>Categoria</th><th>Situação</th><th /></tr></thead>
           <tbody>
             {dados?.map((c) => (
               <tr key={c.id} className={`clicavel ${c.ativa ? '' : 'inativo'}`} onClick={() => setEditando(c)}>
-                <td><strong>{c.nome}</strong></td>
-                <td><Chave ligado={c.ativa} desabilitado={acao.ocupado} aoAlterar={(v) => alternar(c, v)} rotulo={c.ativa ? 'Ativa' : 'Desativada'} /></td>
+                <td data-label="Categoria"><strong>{c.nome}</strong></td>
+                <td data-label="Situação"><Chave ligado={c.ativa} desabilitado={acao.ocupado} aoAlterar={(v) => alternar(c, v)} rotulo={c.ativa ? 'Ativa' : 'Desativada'} /></td>
                 <td className="acoes-linha">
                   <MenuAcoes desabilitado={acao.ocupado} rotulo={`Ações de ${c.nome}`}
                     itens={[{ texto: 'Editar', aoClicar: () => setEditando(c) }, { texto: 'Excluir', perigo: true, aoClicar: () => excluir(c) }]} />

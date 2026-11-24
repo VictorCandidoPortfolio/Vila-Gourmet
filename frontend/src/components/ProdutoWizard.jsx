@@ -198,15 +198,15 @@ function JanelaOpcoes({ grupo, atualizar, alternarAtivo, insumos, onConcluir, ao
         <h3>Opções do grupo (insumos)</h3>
         {grupo.opcoes.length > 0 ? (
           <div className="rolagem">
-            <table>
+            <table className="tabela-mobile">
               <thead><tr><th>Insumo</th><th>Preço</th><th>Mín.</th><th>Máx.</th><th /></tr></thead>
               <tbody>
                 {grupo.opcoes.map((o) => (
                   <tr key={o.insumoId} className={o.disponivel ? '' : 'inativo'}>
-                    <td><strong>{o.nome}</strong>{!o.disponivel && <span className="badge">Inativa</span>}</td>
-                    <td><input type="number" step="0.01" min="0" value={o.preco} onChange={(e) => mudarOpcao(o.insumoId, 'preco', Number(e.target.value))} /></td>
-                    <td><input type="number" min="0" value={o.minimo} onChange={(e) => mudarOpcao(o.insumoId, 'minimo', Number(e.target.value))} /></td>
-                    <td><input type="number" min="0" value={o.maximo} onChange={(e) => mudarOpcao(o.insumoId, 'maximo', Number(e.target.value))} /></td>
+                    <td data-label="Insumo"><strong>{o.nome}</strong>{!o.disponivel && <span className="badge">Inativa</span>}</td>
+                    <td data-label="Preço"><input type="number" step="0.01" min="0" value={o.preco} onChange={(e) => mudarOpcao(o.insumoId, 'preco', Number(e.target.value))} /></td>
+                    <td data-label="Mínimo"><input type="number" min="0" value={o.minimo} onChange={(e) => mudarOpcao(o.insumoId, 'minimo', Number(e.target.value))} /></td>
+                    <td data-label="Máximo"><input type="number" min="0" value={o.maximo} onChange={(e) => mudarOpcao(o.insumoId, 'maximo', Number(e.target.value))} /></td>
                     <td className="acoes-linha">
                       <button type="button" className={o.id && !o.disponivel ? 'btn sec' : 'btn perigo'} onClick={() => removerOpcao(o)}>
                         {!o.id ? 'Remover' : o.disponivel ? 'Desativar' : 'Reativar'}
@@ -288,15 +288,15 @@ function EtapaGrupos({ grupos, setGrupos, insumos, aoCadastrarInsumo, edicao }) 
         <p className="mudo">Nenhum grupo criado. Crie ao menos um e use “Editar” para adicionar as opções.</p>
       ) : (
         <div className="rolagem">
-          <table>
+          <table className="tabela-mobile">
             <thead><tr><th>Grupo</th><th>Seleções</th><th>Cobrança</th><th>Opções</th><th /></tr></thead>
             <tbody>
               {grupos.map((g, i) => (
                 <tr key={i} className={g.ativo ? '' : 'inativo'}>
-                  <td><strong>{g.nome}</strong>{!g.ativo && <span className="badge">Inativo</span>}</td>
-                  <td>{g.minimo}–{g.maximo}</td>
-                  <td>{COBRANCAS[g.modalidadeCobranca]}</td>
-                  <td>{g.opcoes.length ? g.opcoes.map((o) => o.nome).join(', ') : <span className="alerta-texto">Sem opções</span>}</td>
+                  <td data-label="Grupo"><strong>{g.nome}</strong>{!g.ativo && <span className="badge">Inativo</span>}</td>
+                  <td data-label="Seleções">{g.minimo}–{g.maximo}</td>
+                  <td data-label="Cobrança">{COBRANCAS[g.modalidadeCobranca]}</td>
+                  <td data-label="Opções">{g.opcoes.length ? g.opcoes.map((o) => o.nome).join(', ') : <span className="alerta-texto">Sem opções</span>}</td>
                   <td className="acoes-linha">
                     <button type="button" className="btn sec" onClick={() => setAberto(i)}>Editar</button>
                     <button type="button" className={g.id && !g.ativo ? 'btn sec' : 'btn perigo'} onClick={() => alternarAtivo(i)}>
@@ -339,13 +339,13 @@ function EtapaAdicionais({ adicionais, setAdicionais, edicao }) {
       </form>
       {adicionais.length > 0 && (
         <div className="rolagem">
-          <table>
+          <table className="tabela-mobile">
             <thead><tr><th>Adicional</th><th>Preço</th><th /></tr></thead>
             <tbody>
               {adicionais.map((a, i) => (
                 <tr key={i} className={a.disponivel ? '' : 'inativo'}>
-                  <td>{a.nome}{!a.disponivel && <span className="badge">Inativo</span>}</td>
-                  <td>{brl(a.preco)}</td>
+                  <td data-label="Adicional">{a.nome}{!a.disponivel && <span className="badge">Inativo</span>}</td>
+                  <td data-label="Preço">{brl(a.preco)}</td>
                   <td className="acoes-linha">
                     <button type="button" className={a.id && !a.disponivel ? 'btn sec' : 'btn perigo'} onClick={() => alternar(i)}>
                       {!a.id ? 'Excluir' : a.disponivel ? 'Desativar' : 'Reativar'}

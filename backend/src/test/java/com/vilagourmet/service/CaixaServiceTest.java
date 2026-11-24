@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,8 +30,10 @@ import com.vilagourmet.repository.FuncionarioRepository;
 import com.vilagourmet.repository.PagamentoRepository;
 import com.vilagourmet.repository.PedidoRepository;
 import com.vilagourmet.repository.SolicitacaoCancelamentoRepository;
+import com.vilagourmet.repository.HistoricoEdicaoVendaRepository;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -55,7 +58,7 @@ class CaixaServiceTest {
         aberto.setId(1L);
         aberto.setAbertoPor(7L);
         caixa = new CaixaService(abertura, caixas, pedidos, pagamentos, contas, solicitacoes, estados, cancelamento, mesas,
-                mock(PedidoService.class), mock(FuncionarioRepository.class));
+                mock(PedidoService.class), mock(FuncionarioRepository.class), mock(HistoricoEdicaoVendaRepository.class));
         when(pagamentos.findByPedidoIdAndEstado(anyLong(), any())).thenReturn(Optional.empty());
         when(solicitacoes.findByPedidoIdAndEstado(anyLong(), any())).thenReturn(Optional.empty());
         when(contas.findByEstadoOrderByAbertaEmDesc(EstadoContaMesa.ABERTA)).thenReturn(List.of());
@@ -86,7 +89,7 @@ class CaixaServiceTest {
     @Test
     void naoAbreOCaixaDuasVezes() {
         when(abertura.aberta()).thenReturn(true);
-        assertThatThrownBy(() -> caixa.abrir(7L)).isInstanceOfSatisfying(NegocioException.class,
+        assertThatThrownBy(() -> caixa.abrir(7L, false)).isInstanceOfSatisfying(NegocioException.class,
                 e -> assertThat(e.getStatus().value()).isEqualTo(409));
         verify(caixas, never()).saveAndFlush(any());
     }
@@ -95,8 +98,26 @@ class CaixaServiceTest {
     void aberturaSimultaneaEBarradaPelaChaveUnicaDoBanco() {
         when(abertura.aberta()).thenReturn(false);
         when(caixas.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("uq_caixa_um_aberto"));
-        assertThatThrownBy(() -> caixa.abrir(7L)).isInstanceOfSatisfying(NegocioException.class,
+        assertThatThrownBy(() -> caixa.abrir(7L, false)).isInstanceOfSatisfying(NegocioException.class,
                 e -> assertThat(e.getStatus().value()).isEqualTo(409));
+    }
+
+    @Test
+    void aberturaPersisteSeAsVendasOnlineForamLiberadas() {
+        when(abertura.aberta()).thenReturn(false);
+        when(abertura.caixaAberto()).thenReturn(Optional.empty());
+
+        caixa.abrir(7L, true);
+
+        verify(caixas).saveAndFlush(argThat(c -> c.getAbertoPor().equals(7L) && c.isVendasOnline()));
+    }
+
+    @Test
+    void statusInformaSeOSiteEstaDisponivel() {
+        aberto.setVendasOnline(true);
+        caixaAberto();
+
+        assertThat(caixa.status().vendasOnline()).isTrue();
     }
 
     @Test
@@ -185,6 +206,37 @@ class CaixaServiceTest {
         when(abertura.caixaAberto()).thenReturn(Optional.empty());
         assertThatThrownBy(() -> caixa.fechar(7L, true)).isInstanceOfSatisfying(NegocioException.class,
                 e -> assertThat(e.getStatus().value()).isEqualTo(409));
+    }
+
+    @Test
+    void sessaoFechadaPodeSerReabertaPeloHistorico() {
+        Caixa encerrado = new Caixa();
+        encerrado.setId(12L);
+        encerrado.setAbertoPor(7L);
+        encerrado.setFechadoEm(LocalDateTime.now());
+        encerrado.setFechadoPor(7L);
+        when(abertura.aberta()).thenReturn(false);
+        when(caixas.findById(12L)).thenReturn(Optional.of(encerrado));
+        when(abertura.caixaAberto()).thenReturn(Optional.of(encerrado));
+        when(pedidos.findByEstadoNotIn(PedidoService.FINAIS)).thenReturn(List.of());
+
+        CaixaStatusResponse resposta = caixa.reabrir(12L, 9L);
+
+        assertThat(resposta.aberto()).isTrue();
+        assertThat(resposta.caixaId()).isEqualTo(12L);
+        assertThat(encerrado.getFechadoEm()).isNull();
+        assertThat(encerrado.getFechadoPor()).isNull();
+        assertThat(encerrado.getQuantidadeReaberturas()).isEqualTo(1);
+        assertThat(encerrado.getUltimaReaberturaPor()).isEqualTo(9L);
+        verify(caixas).saveAndFlush(encerrado);
+    }
+
+    @Test
+    void naoReabreHistoricoEnquantoOutroCaixaEstaAberto() {
+        when(abertura.aberta()).thenReturn(true);
+        assertThatThrownBy(() -> caixa.reabrir(12L, 9L)).isInstanceOfSatisfying(NegocioException.class,
+                e -> assertThat(e.getStatus().value()).isEqualTo(409));
+        verify(caixas, never()).findById(anyLong());
     }
 
     // ------------------------------------------------------------ filtros de situação dos pedidos

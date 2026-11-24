@@ -5,6 +5,7 @@ import com.vilagourmet.dto.PedidoDTO.EnderecoSnapshot;
 import com.vilagourmet.dto.PedidoDTO.EscolhaResponse;
 import com.vilagourmet.dto.PedidoDTO.HistoricoResponse;
 import com.vilagourmet.dto.PedidoDTO.ItemResponse;
+import com.vilagourmet.dto.PedidoDTO.EdicaoVendaResponse;
 import com.vilagourmet.dto.PedidoDTO.PedidoResponse;
 import com.vilagourmet.model.ItemPedido;
 import com.vilagourmet.model.Pagamento;
@@ -13,6 +14,7 @@ import com.vilagourmet.model.enums.EstadoPagamento;
 import com.vilagourmet.repository.ContaMesaRepository;
 import com.vilagourmet.repository.HistoricoEstadoPedidoRepository;
 import com.vilagourmet.repository.PagamentoRepository;
+import com.vilagourmet.repository.HistoricoEdicaoVendaRepository;
 import com.vilagourmet.util.Cpf;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -24,11 +26,14 @@ public class PedidoMapper {
     private final PagamentoRepository pagamentos;
     private final HistoricoEstadoPedidoRepository historicos;
     private final ContaMesaRepository contas;
+    private final HistoricoEdicaoVendaRepository edicoes;
 
-    public PedidoMapper(PagamentoRepository pagamentos, HistoricoEstadoPedidoRepository historicos, ContaMesaRepository contas) {
+    public PedidoMapper(PagamentoRepository pagamentos, HistoricoEstadoPedidoRepository historicos,
+                        ContaMesaRepository contas, HistoricoEdicaoVendaRepository edicoes) {
         this.pagamentos = pagamentos;
         this.historicos = historicos;
         this.contas = contas;
+        this.edicoes = edicoes;
     }
 
     public PedidoResponse toResponse(Pedido p, boolean comHistorico) {
@@ -45,7 +50,11 @@ public class PedidoMapper {
                 : contas.findById(p.getContaMesaId()).map(c -> c.getCodigoConta()).orElse(null);
         return new PedidoResponse(p.getId(), p.getNumeroPedido(), p.getModalidade(), p.getEstado(), p.getNomeResponsavel(),
                 Cpf.mascarar(p.getCpfResponsavel()), endereco, p.getSubtotal(), p.getTaxaEntrega(), p.getTotal(),
-                p.getObservacao(), p.getCriadoEm(), codigoConta, itens, pagamentoDe(p), historico);
+                p.getObservacao(), p.getCriadoEm(), codigoConta, itens, pagamentoDe(p), historico,
+                p.getUltimaEdicaoCaixaEm(), p.getJustificativaUltimaEdicao(), edicoes.findByPedidoIdOrderByIdAsc(p.getId())
+                        .stream().map(e -> new EdicaoVendaResponse(e.getFuncionarioId(), e.getCriadoEm(), e.getJustificativa(),
+                                e.getNomeAnterior(), e.getNomeNovo(), e.isCpfAlterado(), e.getObservacaoAnterior(),
+                                e.getObservacaoNova(), e.getMetodoAnterior(), e.getMetodoNovo())).toList());
     }
 
     /** Pagamento confirmado, se houver; senão o mais recente. */

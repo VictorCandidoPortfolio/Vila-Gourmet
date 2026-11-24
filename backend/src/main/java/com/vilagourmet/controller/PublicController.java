@@ -7,6 +7,8 @@ import com.vilagourmet.dto.CotacaoDTO.CotacaoRequest;
 import com.vilagourmet.dto.CotacaoDTO.CotacaoResponse;
 import com.vilagourmet.dto.GestaoDTO.AreaConsultaResponse;
 import com.vilagourmet.dto.MesaDTO.AbrirMesaRequest;
+import com.vilagourmet.dto.MesaDTO.AcessarMesaRequest;
+import com.vilagourmet.dto.MesaDTO.AcessoMesaResponse;
 import com.vilagourmet.dto.MesaDTO.ContaMesaResponse;
 import com.vilagourmet.dto.MesaDTO.MesaPedidoRequest;
 import com.vilagourmet.dto.PedidoDTO.CancelamentoResponse;
@@ -68,10 +70,11 @@ public class PublicController {
         this.abertura = abertura;
     }
 
-    /** A loja só vende com o caixa aberto; o front usa isto para avisar o cliente. */
+    /** A loja só vende quando o caixa está aberto e a sessão liberou vendas online. */
     @GetMapping("/loja/status")
     public LojaStatusResponse statusDaLoja() {
-        return abertura.caixaAberto().map(c -> new LojaStatusResponse(true, c.getAbertoEm()))
+        return abertura.caixaAberto().filter(c -> c.isVendasOnline())
+                .map(c -> new LojaStatusResponse(true, c.getAbertoEm()))
                 .orElse(new LojaStatusResponse(false, null));
     }
 
@@ -120,6 +123,11 @@ public class PublicController {
     @ResponseStatus(HttpStatus.CREATED)
     public ContaMesaResponse abrirMesa(@Valid @RequestBody AbrirMesaRequest req) {
         return mesas.abrir(req);
+    }
+
+    @PostMapping("/mesas/acesso")
+    public AcessoMesaResponse acessarMesa(@Valid @RequestBody AcessarMesaRequest req, HttpServletRequest http) {
+        return mesas.acessarPorCpf(req.cpf(), http.getRemoteAddr());
     }
 
     @PostMapping("/mesas/{codigo}/pedidos")

@@ -16,6 +16,7 @@ import com.vilagourmet.repository.ContaFuncionarioRepository;
 import com.vilagourmet.repository.FuncionarioRepository;
 import com.vilagourmet.repository.PerfilRepository;
 import com.vilagourmet.repository.PermissaoRepository;
+import com.vilagourmet.util.SenhaSegura;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +62,7 @@ public class FuncionarioService {
         if (req.senha() == null || req.senha().isBlank()) {
             throw new NegocioException("A senha é obrigatória na criação do funcionário");
         }
+        SenhaSegura.exigirValida(req.senha());
         String email = req.email().trim().toLowerCase();
         if (contas.existsByEmailIgnoreCase(email) || contasCliente.existsByEmailIgnoreCase(email)) {
             throw new NegocioException(HttpStatus.CONFLICT, "E-mail já cadastrado");
@@ -91,6 +93,7 @@ public class FuncionarioService {
         f.setNome(req.nome().trim());
         f.getConta().setEmail(email);
         if (req.senha() != null && !req.senha().isBlank()) {
+            SenhaSegura.exigirValida(req.senha());
             f.getConta().setSenhaHash(encoder.encode(req.senha()));
         }
         if (req.ativa() != null) {
@@ -108,6 +111,7 @@ public class FuncionarioService {
     /** Cria o administrador inicial se não existir nenhum funcionário. Retorna true se criou. */
     @Transactional
     public boolean criarAdministradorInicialSeNecessario(String email, String senha, String nome) {
+        SenhaSegura.exigirValida(senha);
         if (funcionarios.count() > 0) {
             return false;
         }

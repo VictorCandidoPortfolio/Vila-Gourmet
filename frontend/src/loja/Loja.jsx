@@ -27,7 +27,7 @@ function Busca() {
     navigate(`/cardapio${texto.trim() ? `?busca=${encodeURIComponent(texto.trim())}` : ''}`)
   }
   return (
-    <form className="lj-busca" onSubmit={enviar} role="search">
+    <form className={`lj-busca lj-busca-global ${pathname === '/cardapio' ? 'em-cardapio' : ''}`} onSubmit={enviar} role="search">
       <Icon nome="search" tamanho={18} />
       <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar no cardápio…" aria-label="Buscar no cardápio" />
     </form>
@@ -46,10 +46,10 @@ function Cabecalho() {
       <div className="lj-topo-int">
         <Link to="/" className="lj-logo" aria-label="Vila Gourmet — início"><Logo /></Link>
         <nav className="lj-nav" aria-label="Principal">
-          <NavLink to="/" end>Início</NavLink>
-          <NavLink to="/cardapio">Cardápio</NavLink>
-          <NavLink to="/mesa">Na mesa</NavLink>
-          <NavLink to="/acompanhar">Acompanhar pedido</NavLink>
+          <NavLink to="/" end><Icon nome="home" tamanho={19} /><span>Início</span></NavLink>
+          <NavLink to="/cardapio"><Icon nome="book" tamanho={19} /><span>Cardápio</span></NavLink>
+          <NavLink to="/mesa"><Icon nome="store" tamanho={19} /><span>Mesa</span></NavLink>
+          <NavLink to="/acompanhar"><Icon nome="clock" tamanho={19} /><span>Acompanhar</span></NavLink>
         </nav>
         <Busca />
         <div className="lj-conta">

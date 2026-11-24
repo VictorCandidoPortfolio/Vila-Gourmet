@@ -17,6 +17,9 @@ public interface ContaMesaRepository extends JpaRepository<ContaMesa, Long> {
 
     Optional<ContaMesa> findByCodigoConta(String codigoConta);
     boolean existsByCodigoConta(String codigoConta);
+    boolean existsByCpfResponsavelAndEstadoIn(String cpfResponsavel, Collection<EstadoContaMesa> estados);
+    Optional<ContaMesa> findFirstByCpfResponsavelAndEstadoInOrderByAbertaEmDesc(
+            String cpfResponsavel, Collection<EstadoContaMesa> estados);
     List<ContaMesa> findByEstadoOrderByAbertaEmDesc(EstadoContaMesa estado);
     List<ContaMesa> findAllByOrderByAbertaEmDesc();
 }

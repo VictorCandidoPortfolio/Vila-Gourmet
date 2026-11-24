@@ -20,6 +20,16 @@ public final class MesaDTO {
     public record AbrirMesaRequest(@NotBlank @Size(max = 150) String nome, @NotBlank String cpf) {
     }
 
+    public record AcessarMesaRequest(@NotBlank String cpf) {
+    }
+
+    /** Dados mínimos devolvidos ao visitante que recupera uma conta pelo CPF. */
+    public record AcessoMesaResponse(String codigoConta, String nomeResponsavel, EstadoContaMesa estado) {
+    }
+
+    public record EncerrarMesaRequest(@NotBlank @Size(max = 500) String justificativa) {
+    }
+
     /**
      * Pedido em uma conta de mesa. Visitante informa o CPF do responsável; funcionário
      * (endpoint de gestão) localiza a conta apenas pelo código.
@@ -41,6 +51,4 @@ public final class MesaDTO {
                                     List<HistoricoMesaResponse> historico) {
     }
 
-    public record MesaAbertaResponse(ContaMesaResponse conta) {
-    }
 }

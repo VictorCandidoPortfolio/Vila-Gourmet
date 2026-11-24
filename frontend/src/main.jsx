@@ -2,13 +2,21 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 
-// Um único app, duas áreas: a gestão (equipe) vive em /gestao e a loja (cliente) em /.
-// Cada área é carregada sob demanda para que o cliente não baixe o código da gestão (e vice-versa).
+// Um único app, três áreas carregadas sob demanda: loja, gestão e frente de caixa.
 const emGestao = window.location.pathname === '/gestao' || window.location.pathname.startsWith('/gestao/')
+const emCaixa = window.location.pathname === '/caixa' || window.location.pathname.startsWith('/caixa/')
 
 async function iniciar() {
   let arvore
-  if (emGestao) {
+  if (emCaixa) {
+    const [{ default: CaixaApp }, { AuthProvider }] = await Promise.all([import('./CaixaApp.jsx'), import('./auth.jsx'), import('./styles.css')])
+    document.title = 'Vila Gourmet — Frente de caixa'
+    arvore = (
+      <BrowserRouter basename="/caixa">
+        <AuthProvider><CaixaApp /></AuthProvider>
+      </BrowserRouter>
+    )
+  } else if (emGestao) {
     const [{ default: App }, { AuthProvider }] = await Promise.all([import('./App.jsx'), import('./auth.jsx'), import('./styles.css')])
     document.title = 'Vila Gourmet — Gestão'
     arvore = (

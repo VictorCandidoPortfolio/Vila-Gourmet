@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.List;
 
 public final class CaixaDTO {
@@ -16,8 +17,11 @@ public final class CaixaDTO {
     private CaixaDTO() {
     }
 
-    /** Situação pública da pizzaria (para a loja): aberta somente com um caixa aberto. */
+    /** Situação pública da pizzaria: aberta somente quando a sessão liberou vendas online. */
     public record LojaStatusResponse(boolean aberta, LocalDateTime abertaEm) {
+    }
+
+    public record AbrirCaixaRequest(Boolean vendasOnline) {
     }
 
     /**
@@ -25,7 +29,7 @@ public final class CaixaDTO {
      * {@code bloqueios}: motivos que impedem o fechamento (pedidos que não podem ser cancelados).
      */
     public record CaixaStatusResponse(boolean aberto, LocalDateTime abertoEm, String abertoPor,
-                                      int pedidosEmAberto, List<String> bloqueios) {
+                                      int pedidosEmAberto, List<String> bloqueios, Long caixaId, boolean vendasOnline) {
     }
 
     /** O fechamento com pedidos em aberto exige confirmação explícita de que eles serão cancelados. */
@@ -33,6 +37,23 @@ public final class CaixaDTO {
     }
 
     public record FechamentoCaixaResponse(LocalDateTime fechadoEm, int pedidosCancelados, int contasEncerradas) {
+    }
+
+    public record CaixaHistoricoResponse(
+            Long id, LocalDateTime abertoEm, LocalDateTime fechadoEm, String abertoPor, String fechadoPor,
+            int quantidadeReaberturas, int quantidadeVendas, BigDecimal totalVendas, boolean aberto) {
+    }
+
+    public record CaixaDetalheResponse(CaixaHistoricoResponse caixa, List<PedidoDTO.PedidoResponse> vendas) {
+    }
+
+    /** Correções administrativas que não reescrevem itens nem valores históricos da venda. */
+    public record EditarVendaRequest(
+            @NotBlank @Size(max = 150) String nomeResponsavel,
+            String cpfResponsavel,
+            @Size(max = 1000) String observacao,
+            MetodoPagamento metodoPagamento,
+            @NotBlank @Size(max = 500) String justificativa) {
     }
 
     public record EnderecoCaixaRequest(

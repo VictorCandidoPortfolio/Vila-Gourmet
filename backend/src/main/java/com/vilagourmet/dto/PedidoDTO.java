@@ -63,13 +63,21 @@ public final class PedidoDTO {
                                     String justificativa, Long funcionarioId, LocalDateTime em) {
     }
 
+    public record EdicaoVendaResponse(Long funcionarioId, LocalDateTime em, String justificativa,
+                                      String nomeAnterior, String nomeNovo, boolean cpfAlterado,
+                                      String observacaoAnterior, String observacaoNova,
+                                      String metodoAnterior, String metodoNovo) {
+    }
+
     /** CPF sempre mascarado. */
     public record PedidoResponse(
             Long id, String numeroPedido, Modalidade modalidade, EstadoPedido estado,
             String nomeResponsavel, String cpfResponsavel, EnderecoSnapshot endereco,
             BigDecimal subtotal, BigDecimal taxaEntrega, BigDecimal total, String observacao,
             LocalDateTime criadoEm, String codigoConta, List<ItemResponse> itens,
-            PagamentoDTO.PagamentoResponse pagamento, List<HistoricoResponse> historico) {
+            PagamentoDTO.PagamentoResponse pagamento, List<HistoricoResponse> historico,
+            LocalDateTime ultimaEdicaoCaixaEm, String justificativaUltimaEdicao,
+            List<EdicaoVendaResponse> edicoesCaixa) {
     }
 
     /** Códigos em texto puro só existem nesta resposta: o banco guarda apenas o HMAC. */

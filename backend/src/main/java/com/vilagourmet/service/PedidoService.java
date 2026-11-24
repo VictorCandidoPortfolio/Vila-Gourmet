@@ -78,7 +78,7 @@ public class PedidoService {
     /** Pedido de ENTREGA (cliente autenticado) ou RETIRADA (visitante ou cliente). */
     @Transactional
     public PedidoCriadoResponse criar(PedidoRequest req, UsuarioAutenticado usuario, String chaveIdempotencia) {
-        abertura.exigirAberta();
+        abertura.exigirVendasOnline();
         if (req.modalidade() == Modalidade.MESA) {
             throw new NegocioException("Pedidos de mesa são feitos na conta de mesa");
         }
@@ -145,7 +145,7 @@ public class PedidoService {
      */
     @Transactional
     public PedidoCriadoResponse criarPeloCaixa(PedidoCaixaRequest req, String chaveIdempotencia) {
-        abertura.exigirAberta();
+        abertura.exigirCaixaAberto();
         if (req.modalidade() == Modalidade.MESA) {
             throw new NegocioException("Pedidos de mesa são lançados na conta de mesa");
         }
@@ -227,7 +227,7 @@ public class PedidoService {
     /** Pedido dentro de uma conta de mesa já autorizada pelo chamador (MesaService). */
     @Transactional
     public PedidoCriadoResponse criarParaMesa(ContaMesa conta, List<ItemRequest> itens, String observacao, String chaveIdempotencia) {
-        abertura.exigirAberta();
+        abertura.exigirCaixaAberto();
         if (conta.getEstado() != EstadoContaMesa.ABERTA) {
             throw new NegocioException("A conta de mesa não está aberta para novos pedidos");
         }
@@ -294,6 +294,9 @@ public class PedidoService {
     // ---------------------------------------------------------------- internos
 
     private void persistir(Pedido p) {
+        p.setCaixaId(abertura.caixaAberto()
+                .orElseThrow(() -> new NegocioException(HttpStatus.CONFLICT, "O caixa foi fechado antes da confirmação da venda"))
+                .getId());
         p.setNumeroPedido(gerarNumero());
         pedidos.save(p);
         estados.registrarHistorico(p.getId(), null, EstadoPedido.AGUARDANDO_CONFIRMACAO, null, false, null);

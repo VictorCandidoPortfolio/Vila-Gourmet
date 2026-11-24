@@ -1,9 +1,11 @@
 package com.vilagourmet.dto;
 
+import com.vilagourmet.util.SenhaSegura;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,7 +27,8 @@ public final class GestaoDTO {
     }
 
     /** {@code senha} é obrigatória na criação e opcional na edição (redefinição). */
-    public record FuncionarioRequest(@NotBlank @Email @Size(max = 254) String email, @Size(min = 8, max = 72) String senha,
+    public record FuncionarioRequest(@NotBlank @Email @Size(max = 254) String email,
+                                     @Size(min = 8, max = 72) @Pattern(regexp = SenhaSegura.REGEX, message = SenhaSegura.MENSAGEM) String senha,
                                      @NotBlank @Size(max = 150) String nome, @NotNull Set<Long> perfilIds, Boolean ativa) {
     }
 

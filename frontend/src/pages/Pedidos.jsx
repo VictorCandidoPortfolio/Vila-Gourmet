@@ -57,28 +57,28 @@ export default function Pedidos() {
       {carregando && !dados && <p>Carregando…</p>}
       {linhas && (
         <section className="painel sem-padding">
-          <table>
+          <table className="tabela-mobile">
             <thead><tr><th>Número</th><th>Modalidade</th><th>Estado</th><th>Responsável</th><th>Total</th><th>Pagamento</th><th>Criado em</th><th /></tr></thead>
             <tbody>
               {linhas.map((p) => (
                 <tr key={p.id} className="clicavel" onClick={() => setAberto(p.id)}>
-                  <td><strong>{p.numeroPedido}</strong>{p.codigoConta && <small> · mesa {p.codigoConta}</small>}</td>
-                  <td><span className={`mod mod-${p.modalidade}`}>{rotulo(p.modalidade)}</span></td>
-                  <td><Badge valor={p.estado} /></td>
-                  <td>{p.nomeResponsavel}</td>
-                  <td>{brl(p.total)}</td>
-                  <td>{p.pagamento ? <Badge valor={p.pagamento.estado} /> : <span className="mudo">—</span>}</td>
-                  <td>{dataHora(p.criadoEm)}</td>
-                  <td className="mudo"><Icon nome="eye" tamanho={18} /></td>
+                  <td data-label="Pedido"><strong>{p.numeroPedido}</strong>{p.codigoConta && <small> · mesa {p.codigoConta}</small>}</td>
+                  <td data-label="Modalidade"><span className={`mod mod-${p.modalidade}`}>{rotulo(p.modalidade)}</span></td>
+                  <td data-label="Estado"><Badge valor={p.estado} /></td>
+                  <td data-label="Responsável">{p.nomeResponsavel}</td>
+                  <td data-label="Total">{brl(p.total)}</td>
+                  <td data-label="Pagamento">{p.pagamento ? <Badge valor={p.pagamento.estado} /> : <span className="mudo">—</span>}</td>
+                  <td data-label="Criado em">{dataHora(p.criadoEm)}</td>
+                  <td data-label="" className="mudo"><Icon nome="eye" tamanho={18} /> Ver pedido</td>
                 </tr>
               ))}
               {linhas.length === 0 && <tr><td colSpan="8" className="mudo">Nenhum pedido em andamento.</td></tr>}
             </tbody>
           </table>
           <div className="paginacao">
-            <button className="btn sec" disabled={paginaAtual <= 0} onClick={() => setPagina((p) => p - 1)}>← Anterior</button>
+            <button className="btn sec" disabled={paginaAtual <= 0} onClick={() => setPagina((p) => p - 1)}>Anterior</button>
             <span>Página {paginaAtual + 1} de {totalPaginas}</span>
-            <button className="btn sec" disabled={paginaAtual + 1 >= totalPaginas} onClick={() => setPagina((p) => p + 1)}>Próxima →</button>
+            <button className="btn sec" disabled={paginaAtual + 1 >= totalPaginas} onClick={() => setPagina((p) => p + 1)}>Próxima</button>
           </div>
         </section>
       )}

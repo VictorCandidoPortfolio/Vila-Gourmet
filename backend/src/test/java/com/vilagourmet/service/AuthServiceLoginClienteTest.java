@@ -3,6 +3,7 @@ package com.vilagourmet.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -111,9 +112,26 @@ class AuthServiceLoginClienteTest {
     // ------------------------------------------------------------ CPF único no cadastro
 
     @Test
+    void cadastroArmazenaSomenteHashBcrypt() {
+        auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "Senha@forte1", "Novo", CPF));
+
+        verify(contas).save(argThat(conta -> !"Senha@forte1".equals(conta.getSenhaHash())
+                && conta.getSenhaHash().startsWith("$2")
+                && encoder.matches("Senha@forte1", conta.getSenhaHash())));
+    }
+
+    @Test
+    void cadastroRecusaSenhaFracaMesmoSemValidacaoDoController() {
+        assertThatThrownBy(() -> auth.cadastrarCliente(
+                new CadastroClienteRequest("novo@x.com", "senhafraca", "Novo", CPF)))
+                .isInstanceOf(NegocioException.class)
+                .hasMessage("Confira os requisitos de segurança da senha");
+    }
+
+    @Test
     void cadastroComCpfJaExistenteEhRecusadoComConflito() {
         when(clientes.existsByCpf(CPF)).thenReturn(true);
-        assertThatThrownBy(() -> auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "senhaforte1", "Novo", "529.982.247-25")))
+        assertThatThrownBy(() -> auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "Senha@forte1", "Novo", "529.982.247-25")))
                 .isInstanceOfSatisfying(NegocioException.class, e -> {
                     assertThat(e.getStatus().value()).isEqualTo(409);
                     assertThat(e.getMessage()).contains("CPF já cadastrado");
@@ -123,13 +141,13 @@ class AuthServiceLoginClienteTest {
     @Test
     void cadastroSimultaneoComMesmoCpfBarradoPelaChaveUnicaDoBanco() {
         when(clientes.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("uq_cliente_cpf"));
-        assertThatThrownBy(() -> auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "senhaforte1", "Novo", CPF)))
+        assertThatThrownBy(() -> auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "Senha@forte1", "Novo", CPF)))
                 .isInstanceOfSatisfying(NegocioException.class, e -> assertThat(e.getStatus().value()).isEqualTo(409));
     }
 
     @Test
     void cadastroComCpfInvalidoNemChegaAoBanco() {
-        assertThatThrownBy(() -> auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "senhaforte1", "Novo", "111.111.111-11")))
+        assertThatThrownBy(() -> auth.cadastrarCliente(new CadastroClienteRequest("novo@x.com", "Senha@forte1", "Novo", "111.111.111-11")))
                 .isInstanceOf(NegocioException.class).hasMessageContaining("CPF inválido");
     }
 }

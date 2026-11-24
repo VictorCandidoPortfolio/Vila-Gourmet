@@ -17,6 +17,7 @@ import com.vilagourmet.repository.ContaClienteRepository;
 import com.vilagourmet.repository.ContaFuncionarioRepository;
 import com.vilagourmet.repository.FuncionarioRepository;
 import com.vilagourmet.util.Cpf;
+import com.vilagourmet.util.SenhaSegura;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -68,6 +69,7 @@ public class AuthService {
      * O bloqueio serializa tentativas simultâneas dentro desta instância.
      */
     public synchronized TokenResponse primeiroAcesso(PrimeiroAcessoRequest req) {
+        SenhaSegura.exigirValida(req.senha());
         String email = req.email().trim().toLowerCase();
         if (contasCliente.existsByEmailIgnoreCase(email)) {
             throw new NegocioException(HttpStatus.CONFLICT, "E-mail já cadastrado");
@@ -80,6 +82,7 @@ public class AuthService {
 
     @Transactional
     public TokenResponse cadastrarCliente(CadastroClienteRequest req) {
+        SenhaSegura.exigirValida(req.senha());
         String email = req.email().trim().toLowerCase();
         String cpf = Cpf.exigirValido(req.cpf());
         if (contasCliente.existsByEmailIgnoreCase(email) || contasFuncionario.existsByEmailIgnoreCase(email)) {

@@ -93,14 +93,14 @@ export default function AreasAtendidas() {
                   <small className="mudo">{g.ativas} de {g.total} {g.total === 1 ? 'bairro atendido' : 'bairros atendidos'}</small>
                 </button>
                 {aberta && (
-                  <table>
+                  <table className="tabela-mobile">
                     <thead><tr><th>Bairro</th><th>Origem</th><th>Atendido</th></tr></thead>
                     <tbody>
                       {g.areas.map((a) => (
                         <tr key={a.id}>
-                          <td>{a.bairro}</td>
-                          <td className="mudo">{a.origem === 'IBGE_OSM' ? 'Importado' : 'Manual'}</td>
-                          <td><Chave ligado={a.ativa} desabilitado={acao.ocupado} aoAlterar={(v) => definirAtiva(a, v)} rotulo={a.ativa ? 'Atendido' : 'Desativado'} /></td>
+                          <td data-label="Bairro">{a.bairro}</td>
+                          <td data-label="Origem" className="mudo">{a.origem === 'IBGE_OSM' ? 'Importado' : 'Manual'}</td>
+                          <td data-label="Atendido"><Chave ligado={a.ativa} desabilitado={acao.ocupado} aoAlterar={(v) => definirAtiva(a, v)} rotulo={a.ativa ? 'Atendido' : 'Desativado'} /></td>
                         </tr>
                       ))}
                     </tbody>

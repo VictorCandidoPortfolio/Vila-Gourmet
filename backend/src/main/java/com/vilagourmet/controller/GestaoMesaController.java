@@ -1,6 +1,7 @@
 package com.vilagourmet.controller;
 
 import com.vilagourmet.dto.MesaDTO.ContaMesaResponse;
+import com.vilagourmet.dto.MesaDTO.EncerrarMesaRequest;
 import com.vilagourmet.dto.MesaDTO.MesaPedidoRequest;
 import com.vilagourmet.dto.PagamentoDTO.ConfirmarPagamentoRequest;
 import com.vilagourmet.dto.PagamentoDTO.PagamentoResponse;
@@ -27,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Contas de mesa: localização pelo código, pedidos, fechamento e pagamento. */
 @RestController
-@RequestMapping("/api/gestao/mesas")
+@RequestMapping({"/api/caixa/mesas", "/api/gestao/mesas"})
 @PreAuthorize("hasAuthority('MESA_GERENCIAR')")
 public class GestaoMesaController {
 
@@ -59,6 +60,14 @@ public class GestaoMesaController {
     @PostMapping("/{codigo}/fechamento")
     public ContaMesaResponse iniciarFechamento(@PathVariable String codigo, @AuthenticationPrincipal UsuarioAutenticado u) {
         return mesas.iniciarFechamento(codigo, u.id());
+    }
+
+    /** Encerra sem cobrança uma conta aberta por engano e que não possui consumo válido. */
+    @PostMapping("/{codigo}/encerrar-sem-fechamento")
+    public ContaMesaResponse encerrarSemFechamento(@PathVariable String codigo,
+                                                   @Valid @RequestBody EncerrarMesaRequest req,
+                                                   @AuthenticationPrincipal UsuarioAutenticado u) {
+        return mesas.encerrarSemFechamento(codigo, u.id(), req.justificativa());
     }
 
     @PostMapping("/{codigo}/fechamento/cancelar")

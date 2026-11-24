@@ -20,6 +20,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     Optional<Pedido> findByChaveIdempotencia(String chaveIdempotencia);
     List<Pedido> findByClienteIdOrderByCriadoEmDesc(Long clienteId);
     List<Pedido> findByContaMesaIdOrderByIdAsc(Long contaMesaId);
+    List<Pedido> findByCaixaIdOrderByCriadoEmDesc(Long caixaId);
     @Query("select p from Pedido p where p.estado in :estados and (:modalidade is null or p.modalidade = :modalidade) "
             + "and (:ini is null or p.criadoEm >= :ini) and (:fim is null or p.criadoEm < :fim) order by p.criadoEm desc")
     Page<Pedido> buscar(@Param("estados") Collection<EstadoPedido> estados, @Param("modalidade") Modalidade modalidade,

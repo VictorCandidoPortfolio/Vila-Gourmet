@@ -7,19 +7,26 @@ import PedidoDetalhe from '../components/PedidoDetalhe.jsx'
 
 function ContaDetalhe({ codigo, onAtualizou }) {
   const { pode } = useAuth()
-  const { dados: c, erro, recarregar } = useCarga(() => get(`/api/gestao/mesas/${codigo}`), [codigo], 15000)
+  const { dados: c, erro, recarregar } = useCarga(() => get(`/api/caixa/mesas/${codigo}`), [codigo], 15000)
   const acao = useAcao()
   const [novos, setNovos] = useState([])
   const [pedidoAberto, setPedidoAberto] = useState(null)
   const [metodo, setMetodo] = useState('DINHEIRO')
   const [recebido, setRecebido] = useState('')
   const [justificativa, setJustificativa] = useState('')
+  const [motivoEncerramento, setMotivoEncerramento] = useState('')
 
   const rodar = (fn) => acao.executar(async () => { await fn(); await recarregar(); onAtualizou() })
 
   if (!c) return <Erro erro={erro} />
   const aberta = c.estado === 'ABERTA'
   const fech = c.fechamento
+  const semConsumo = c.pedidos.every((p) => p.estado === 'CANCELADO')
+
+  const encerrarSemFechamento = () => {
+    if (!window.confirm('Encerrar esta mesa sem fechamento e sem cobrança? Esta ação não reabre a conta.')) return
+    rodar(() => post(`/api/caixa/mesas/${c.codigoConta}/encerrar-sem-fechamento`, { justificativa: motivoEncerramento.trim() }))
+  }
 
   return (
     <section className="cartao">
@@ -31,13 +38,13 @@ function ContaDetalhe({ codigo, onAtualizou }) {
       <Erro erro={acao.erro} />
 
       <h3>Pedidos da conta</h3>
-      <table>
+      <table className="tabela-mobile">
         <thead><tr><th>Número</th><th>Estado</th><th>Itens</th><th>Total</th></tr></thead>
         <tbody>
           {c.pedidos.map((p) => (
             <tr key={p.id} className="clicavel" onClick={() => setPedidoAberto(p.id)}>
-              <td><strong>{p.numeroPedido}</strong></td><td><Badge valor={p.estado} /></td>
-              <td>{p.itens.map((i) => `${i.quantidade}x ${i.nomeProduto}`).join(', ')}</td><td>{brl(p.total)}</td>
+              <td data-label="Pedido"><strong>{p.numeroPedido}</strong></td><td data-label="Estado"><Badge valor={p.estado} /></td>
+              <td data-label="Itens">{p.itens.map((i) => `${i.quantidade}x ${i.nomeProduto}`).join(', ')}</td><td data-label="Total">{brl(p.total)}</td>
             </tr>
           ))}
           {c.pedidos.length === 0 && <tr><td colSpan="4" className="mudo">Sem pedidos ainda.</td></tr>}
@@ -54,7 +61,7 @@ function ContaDetalhe({ codigo, onAtualizou }) {
               <div className="linha">
                 <button className="btn" disabled={acao.ocupado}
                   onClick={() => rodar(async () => {
-                    await post(`/api/gestao/mesas/${c.codigoConta}/pedidos`, { itens: novos.map((n) => n.item) })
+                    await post(`/api/caixa/mesas/${c.codigoConta}/pedidos`, { itens: novos.map((n) => n.item) })
                     setNovos([])
                   })}>Lançar pedido na conta</button>
                 <button className="btn sec" onClick={() => setNovos([])}>Limpar</button>
@@ -63,9 +70,20 @@ function ContaDetalhe({ codigo, onAtualizou }) {
           )}
           <h3>Fechamento</h3>
           <p className="mudo">Só é possível fechar quando todos os pedidos não cancelados estiverem servidos.</p>
-          <button className="btn" disabled={acao.ocupado} onClick={() => rodar(() => post(`/api/gestao/mesas/${c.codigoConta}/fechamento`))}>
+          <button className="btn" disabled={acao.ocupado} onClick={() => rodar(() => post(`/api/caixa/mesas/${c.codigoConta}/fechamento`))}>
             Iniciar fechamento da conta
           </button>
+          {semConsumo && (
+            <div className="linha">
+              <Campo label="Motivo do encerramento sem cobrança">
+                <input value={motivoEncerramento} maxLength={500} onChange={(e) => setMotivoEncerramento(e.target.value)}
+                  placeholder="Ex.: conta aberta por engano" />
+              </Campo>
+              <button className="btn perigo" disabled={acao.ocupado || !motivoEncerramento.trim()} onClick={encerrarSemFechamento}>
+                Encerrar mesa sem fechamento
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -83,7 +101,7 @@ function ContaDetalhe({ codigo, onAtualizou }) {
                 <Campo label="Valor recebido"><input type="number" step="0.01" min="0" value={recebido} onChange={(e) => setRecebido(e.target.value)} /></Campo>
               )}
               <button className="btn" disabled={acao.ocupado}
-                onClick={() => rodar(() => post(`/api/gestao/mesas/fechamentos/${fech.id}/pagamento`,
+                onClick={() => rodar(() => post(`/api/caixa/mesas/fechamentos/${fech.id}/pagamento`,
                   { metodo, valorRecebido: metodo === 'DINHEIRO' && recebido ? Number(recebido) : null }))}>
                 Confirmar pagamento e encerrar conta
               </button>
@@ -94,7 +112,7 @@ function ContaDetalhe({ codigo, onAtualizou }) {
               <input value={justificativa} onChange={(e) => setJustificativa(e.target.value)} />
             </Campo>
             <button className="btn sec" disabled={acao.ocupado || !justificativa.trim()}
-              onClick={() => rodar(() => post(`/api/gestao/mesas/${c.codigoConta}/fechamento/cancelar`, { justificativa }))}>
+              onClick={() => rodar(() => post(`/api/caixa/mesas/${c.codigoConta}/fechamento/cancelar`, { justificativa }))}>
               Cancelar fechamento
             </button>
           </div>
@@ -103,6 +121,9 @@ function ContaDetalhe({ codigo, onAtualizou }) {
 
       {c.estado === 'ENCERRADA' && fech && (
         <p>Encerrada em {dataHora(c.encerradaEm)} · pago {brl(fech.total)}{fech.pagamento && ` (${rotulo(fech.pagamento.metodo)})`}. Contas encerradas não são reabertas na V1.</p>
+      )}
+      {c.estado === 'ENCERRADA' && !fech && (
+        <p>Encerrada sem fechamento e sem cobrança em {dataHora(c.encerradaEm)}. Contas encerradas não são reabertas na V1.</p>
       )}
 
       <h3>Histórico da conta</h3>
@@ -121,7 +142,7 @@ export default function Mesas() {
   const [estado, setEstado] = useState('')
   const [codigo, setCodigo] = useState('')
   const [busca, setBusca] = useState('')
-  const { dados, erro, recarregar } = useCarga(() => get(`/api/gestao/mesas${estado ? `?estado=${estado}` : ''}`), [estado], 15000)
+  const { dados, erro, recarregar } = useCarga(() => get(`/api/caixa/mesas${estado ? `?estado=${estado}` : ''}`), [estado], 15000)
 
   return (
     <>
@@ -140,12 +161,12 @@ export default function Mesas() {
       </div>
       <Erro erro={erro} />
       <div className="duas-colunas assimetrica">
-        <table>
+        <table className="tabela-mobile">
           <thead><tr><th>Código</th><th>Responsável</th><th>Estado</th><th>Total</th></tr></thead>
           <tbody>
             {dados?.map((c) => (
               <tr key={c.id} className={`clicavel ${c.codigoConta === codigo ? 'sel' : ''}`} onClick={() => setCodigo(c.codigoConta)}>
-                <td><strong>{c.codigoConta}</strong></td><td>{c.nomeResponsavel}</td><td><Badge valor={c.estado} /></td><td>{brl(c.total)}</td>
+                <td data-label="Código"><strong>{c.codigoConta}</strong></td><td data-label="Responsável">{c.nomeResponsavel}</td><td data-label="Estado"><Badge valor={c.estado} /></td><td data-label="Total">{brl(c.total)}</td>
               </tr>
             ))}
             {dados?.length === 0 && <tr><td colSpan="4" className="mudo">Nenhuma conta.</td></tr>}

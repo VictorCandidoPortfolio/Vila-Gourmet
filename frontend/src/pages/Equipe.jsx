@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { get, post, put } from '../api.js'
 import { useAuth } from '../auth.jsx'
+import CampoSenha, { senhaValida } from '../components/CampoSenha.jsx'
 import { Campo, Erro, Modal, useAcao, useCarga } from '../ui.jsx'
 
 function FormFuncionario({ f, perfis, onSalvo, onFechar }) {
@@ -8,23 +9,27 @@ function FormFuncionario({ f, perfis, onSalvo, onFechar }) {
   const [email, setEmail] = useState(f?.email ?? '')
   const [nome, setNome] = useState(f?.nome ?? '')
   const [senha, setSenha] = useState('')
+  const [tentouEnviar, setTentouEnviar] = useState(false)
   const [ativa, setAtiva] = useState(f?.ativa ?? true)
   const [perfilIds, setPerfilIds] = useState(new Set(perfis.filter((p) => f?.perfis.includes(p.nome)).map((p) => p.id)))
 
   const alternar = (id) => { const n = new Set(perfilIds); n.has(id) ? n.delete(id) : n.add(id); setPerfilIds(n) }
   const salvar = (e) => {
     e.preventDefault()
+    setTentouEnviar(true)
+    if (!e.currentTarget.checkValidity()) { e.currentTarget.reportValidity(); return }
+    if ((!f || senha) && !senhaValida(senha)) return
     const corpo = { email, nome, ativa, perfilIds: [...perfilIds], senha: senha || null }
     acao.executar(async () => { await (f ? put(`/api/gestao/funcionarios/${f.id}`, corpo) : post('/api/gestao/funcionarios', corpo)); onSalvo() })
   }
   return (
     <Modal titulo={f ? 'Editar funcionário' : 'Novo funcionário'} onFechar={onFechar}>
-      <form onSubmit={salvar} className="coluna">
+      <form onSubmit={salvar} className="coluna" noValidate>
         <Campo label="Nome"><input value={nome} onChange={(e) => setNome(e.target.value)} required /></Campo>
         <Campo label="E-mail"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Campo>
-        <Campo label={f ? 'Nova senha (deixe em branco para manter)' : 'Senha'} dica="Mínimo de 8 caracteres. Armazenada apenas como hash BCrypt.">
-          <input type="password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required={!f} autoComplete="new-password" />
-        </Campo>
+        <CampoSenha label={f ? 'Nova senha (deixe em branco para manter)' : 'Senha'} value={senha}
+          onChange={(e) => setSenha(e.target.value)} required={!f} politica permitirVazia={Boolean(f)}
+          mostrarErro={tentouEnviar && (!f || Boolean(senha))} autoComplete="new-password" />
         <fieldset><legend>Perfis</legend>
           {perfis.filter((p) => p.ativo || perfilIds.has(p.id)).map((p) => (
             <label key={p.id} className="check"><input type="checkbox" checked={perfilIds.has(p.id)} onChange={() => alternar(p.id)} /> {p.nome}</label>
@@ -85,14 +90,14 @@ export default function Equipe() {
 
       <section className="cartao">
         <div className="linha entre"><h2>Funcionários</h2><button className="btn" onClick={() => setFormF('novo')}>+ Novo funcionário</button></div>
-        <table>
+        <table className="tabela-mobile">
           <thead><tr><th>Nome</th><th>E-mail</th><th>Perfis</th><th>Situação</th><th /></tr></thead>
           <tbody>
             {funcionarios.dados?.map((f) => (
               <tr key={f.id}>
-                <td>{f.nome}</td><td>{f.email}</td><td>{f.perfis.join(', ') || '—'}</td>
-                <td>{f.ativa ? 'Ativo' : 'Desativado'}</td>
-                <td><button className="btn sec" onClick={() => setFormF(f)}>Editar</button></td>
+                <td data-label="Nome">{f.nome}</td><td data-label="E-mail">{f.email}</td><td data-label="Perfis">{f.perfis.join(', ') || '—'}</td>
+                <td data-label="Situação">{f.ativa ? 'Ativo' : 'Desativado'}</td>
+                <td data-label=""><button className="btn sec" onClick={() => setFormF(f)}>Editar</button></td>
               </tr>
             ))}
           </tbody>
@@ -102,15 +107,15 @@ export default function Equipe() {
       {pode('PERFIL_GERENCIAR') && (
         <section className="cartao">
           <div className="linha entre"><h2>Perfis e permissões</h2><button className="btn" onClick={() => setFormP('novo')}>+ Novo perfil</button></div>
-          <table>
+          <table className="tabela-mobile">
             <thead><tr><th>Perfil</th><th>Permissões</th><th>Situação</th><th /></tr></thead>
             <tbody>
               {perfis.dados?.map((p) => (
                 <tr key={p.id}>
-                  <td><strong>{p.nome}</strong><div className="pequeno mudo">{p.descricao}</div></td>
-                  <td className="pequeno">{p.permissoes.map((x) => x.codigo).join(', ') || '—'}</td>
-                  <td>{p.ativo ? 'Ativo' : 'Inativo'}</td>
-                  <td><button className="btn sec" onClick={() => setFormP(p)}>Editar</button></td>
+                  <td data-label="Perfil"><strong>{p.nome}</strong><div className="pequeno mudo">{p.descricao}</div></td>
+                  <td data-label="Permissões" className="pequeno">{p.permissoes.map((x) => x.codigo).join(', ') || '—'}</td>
+                  <td data-label="Situação">{p.ativo ? 'Ativo' : 'Inativo'}</td>
+                  <td data-label=""><button className="btn sec" onClick={() => setFormP(p)}>Editar</button></td>
                 </tr>
               ))}
             </tbody>

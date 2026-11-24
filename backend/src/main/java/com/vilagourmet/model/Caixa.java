@@ -17,10 +17,20 @@ public class Caixa extends EntidadeBase {
 
     private Long abertoPor;
 
+    /** Se a loja pública pode receber pedidos durante esta sessão. */
+    private boolean vendasOnline;
+
     private LocalDateTime fechadoEm;
 
     private Long fechadoPor;
 
     /** Pedidos não concluídos que foram cancelados no fechamento. */
     private int pedidosCancelados;
+
+    /** Quantas vezes esta mesma sessão foi retomada pelo histórico. */
+    private int quantidadeReaberturas;
+
+    private LocalDateTime ultimaReaberturaEm;
+
+    private Long ultimaReaberturaPor;
 }

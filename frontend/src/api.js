@@ -8,7 +8,7 @@ const lerToken = (area) => { try { return sessionStorage.getItem(CHAVES[area]) }
 const tokens = { gestao: lerToken('gestao'), cliente: lerToken('cliente') }
 const aoExpirar = { gestao: () => {}, cliente: () => {} }
 
-const areaDe = (path) => (path.startsWith('/api/gestao') || path.startsWith('/api/auth/funcionario') ? 'gestao' : 'cliente')
+const areaDe = (path) => (path.startsWith('/api/gestao') || path.startsWith('/api/caixa') || path.startsWith('/api/auth/funcionario') ? 'gestao' : 'cliente')
 
 function guardar(area, t) {
   tokens[area] = t

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { get, post } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import Logo from '../components/Logo.jsx'
+import CampoSenha, { senhaValida } from '../components/CampoSenha.jsx'
 import { Campo, Erro, useAcao, useCarga } from '../ui.jsx'
 
 function PrimeiroAcesso({ onCriado }) {
@@ -9,12 +10,15 @@ function PrimeiroAcesso({ onCriado }) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [confirmacao, setConfirmacao] = useState('')
+  const [tentouEnviar, setTentouEnviar] = useState(false)
   const { erro, ocupado, executar } = useAcao()
   const diferente = confirmacao !== '' && confirmacao !== senha
 
   const criar = (e) => {
     e.preventDefault()
-    if (senha !== confirmacao) return
+    setTentouEnviar(true)
+    if (!e.currentTarget.checkValidity()) { e.currentTarget.reportValidity(); return }
+    if (!senhaValida(senha) || senha !== confirmacao) return
     executar(async () => {
       await post('/api/auth/funcionario/primeiro-acesso', { nome, email, senha })
       await onCriado(email, senha)
@@ -22,19 +26,16 @@ function PrimeiroAcesso({ onCriado }) {
   }
 
   return (
-    <form className="login-cartao" onSubmit={criar}>
+    <form className="login-cartao" onSubmit={criar} noValidate>
       <Logo />
       <p className="mudo">Primeiro acesso: crie a conta do administrador</p>
       <Campo label="Nome"><input value={nome} onChange={(e) => setNome(e.target.value)} autoFocus required /></Campo>
       <Campo label="E-mail"><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></Campo>
-      <Campo label="Senha" dica="Mínimo de 8 caracteres.">
-        <input type="password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required autoComplete="new-password" />
-      </Campo>
-      <Campo label="Confirmar senha" dica={diferente ? 'As senhas não conferem.' : undefined}>
-        <input type="password" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required autoComplete="new-password" />
-      </Campo>
+      <CampoSenha value={senha} onChange={(e) => setSenha(e.target.value)} required politica mostrarErro={tentouEnviar} autoComplete="new-password" />
+      <CampoSenha label="Confirmar senha" value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} required
+        erroExterno={diferente ? 'As senhas não coincidem.' : null} autoComplete="new-password" />
       <Erro erro={erro} />
-      <button className="btn" disabled={ocupado || diferente}>{ocupado ? 'Criando…' : 'Criar conta e entrar'}</button>
+      <button className="btn" disabled={ocupado}>{ocupado ? 'Criando…' : 'Criar conta e entrar'}</button>
     </form>
   )
 }
@@ -62,9 +63,7 @@ export default function Login() {
           <Campo label="E-mail">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus required />
           </Campo>
-          <Campo label="Senha">
-            <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
-          </Campo>
+          <CampoSenha value={senha} onChange={(e) => setSenha(e.target.value)} required autoComplete="current-password" />
           <Erro erro={inicial.erro} />
           <Erro erro={erro} />
           <button className="btn" disabled={ocupado}>{ocupado ? 'Entrando…' : 'Entrar'}</button>

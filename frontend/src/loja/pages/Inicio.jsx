@@ -34,13 +34,29 @@ export default function Inicio() {
     <>
       <section className="lj-hero">
         <div className="lj-hero-int">
-          <p className="lj-eyebrow">Pizzas · Sabores · Bons momentos</p>
-          <h1>Mais que pizza,<br />é um <em>bom momento.</em></h1>
-          <p className="lj-hero-texto">Escolha como quer receber o seu pedido.</p>
-          <div className="lj-hero-acoes">
-            <button className="btn grande" onClick={() => pedir('ENTREGA')}><Icon nome="truck" /> Pedir delivery</button>
-            <button className="btn contorno grande" onClick={() => pedir('RETIRADA')}><Icon nome="bag" /> Retirar no local</button>
-            <button className="btn contorno grande" onClick={() => navigate('/mesa')}><Icon nome="store" /> Consumir na mesa</button>
+          <div className="lj-hero-layout">
+            <div className="lj-hero-copy">
+              <p className="lj-eyebrow">Feita na hora · Do nosso forno para você</p>
+              <h1>Seu momento<br />pede uma <em>pizza.</em></h1>
+              <p className="lj-hero-texto">Escolha seus sabores favoritos e receba como preferir. Simples, rápido e do seu jeito.</p>
+              <div className="lj-hero-acoes">
+                <button className="btn grande" onClick={() => pedir('ENTREGA')}><Icon nome="truck" /> Pedir delivery</button>
+                <button className="btn contorno grande" onClick={() => pedir('RETIRADA')}><Icon nome="bag" /> Retirar no local</button>
+                <button className="btn contorno grande" onClick={() => navigate('/mesa')}><Icon nome="store" /> Consumir na mesa</button>
+              </div>
+            </div>
+            <div className="lj-hero-arte" aria-hidden="true">
+              <span className="lj-forma lj-forma-vermelha" />
+              <span className="lj-forma lj-forma-verde" />
+              <span className="lj-forma lj-forma-rosa" />
+              <div className="lj-pizza">
+                <span className="lj-pizza-molho">
+                  <i className="lj-pizza-tomate t1" /><i className="lj-pizza-tomate t2" /><i className="lj-pizza-tomate t3" />
+                  <i className="lj-pizza-folha f1" /><i className="lj-pizza-folha f2" />
+                </span>
+              </div>
+              <span className="lj-arte-selo">Desde<br /><strong>1998</strong></span>
+            </div>
           </div>
           <ul className="lj-como">
             {COMO.map((c) => (
@@ -66,7 +82,7 @@ export default function Inicio() {
               </div>
               <div className="lj-categoria-base">
                 <span><strong>{c.nome}</strong><small>{c.quantidade} {c.quantidade === 1 ? 'produto' : 'produtos'}</small></span>
-                <Icon nome="arrow" />
+                <small className="lj-ver-opcoes">Ver opções</small>
               </div>
             </Link>
           ))}

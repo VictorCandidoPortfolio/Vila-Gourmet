@@ -10,10 +10,9 @@ import EnderecoForm from '../EnderecoForm.jsx'
 
 const PAGAMENTOS = { PIX: 'Pix', CARTAO: 'Cartão', DINHEIRO: 'Dinheiro' }
 
-function Resumo({ itens, subtotal, taxa, total }) {
+function ConteudoResumo({ itens, subtotal, taxa, total }) {
   return (
-    <aside className="lj-resumo lj-cartao">
-      <h2>Resumo</h2>
+    <>
       <ul className="lj-itens compacto">
         {itens.map((i) => (
           <li key={i.uid}>
@@ -25,6 +24,21 @@ function Resumo({ itens, subtotal, taxa, total }) {
       <div className="lj-total"><span>Subtotal</span><span>{brl(subtotal)}</span></div>
       {taxa != null && <div className="lj-total"><span>Taxa de entrega</span><span>{brl(taxa)}</span></div>}
       <div className="lj-total forte"><span>Total</span><strong>{brl(total)}</strong></div>
+    </>
+  )
+}
+
+function Resumo({ itens, subtotal, taxa, total, mobile = false }) {
+  if (mobile) return (
+    <details className="lj-resumo-mobile lj-cartao">
+        <summary><span>Resumo do pedido</span><strong>{brl(total)}</strong></summary>
+        <ConteudoResumo itens={itens} subtotal={subtotal} taxa={taxa} total={total} />
+    </details>
+  )
+  return (
+    <aside className="lj-resumo lj-cartao">
+      <h2>Resumo</h2>
+      <ConteudoResumo itens={itens} subtotal={subtotal} taxa={taxa} total={total} />
     </aside>
   )
 }
@@ -136,6 +150,7 @@ export default function Finalizar() {
   return (
     <div className="lj-pagina">
       <h1 className="lj-titulo-pagina">Finalizar pedido</h1>
+      <Resumo mobile itens={itens} subtotal={subtotal} taxa={taxa} total={total} />
       <div className="lj-checkout">
         <form onSubmit={enviar} className="lj-checkout-form">
           {mudancas.length > 0 && (
@@ -239,9 +254,8 @@ export default function Finalizar() {
 
           <Erro erro={envio.erro} />
           {!aberta && <p className="alerta erro" role="status">Estamos fechados no momento: não é possível confirmar pedidos agora. Seu carrinho fica guardado.</p>}
-          <button className="btn grande" disabled={!podeEnviar}>{envio.ocupado ? 'Enviando pedido…' : `Confirmar pedido · ${brl(total)}`}</button>
+          <button className="btn grande lj-confirmar-pedido" disabled={!podeEnviar}>{envio.ocupado ? 'Enviando pedido…' : `Confirmar pedido · ${brl(total)}`}</button>
         </form>
-
         <Resumo itens={itens} subtotal={subtotal} taxa={taxa} total={total} />
       </div>
     </div>

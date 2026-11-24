@@ -16,7 +16,7 @@ const mascaraCep = (v) => {
  * Painel do pedido na frente de caixa: itens, modalidade (retirada, entrega ou mesa) e envio.
  * Pelo caixa basta o nome do cliente (sem cadastro); a entrega usa o endereço digitado, que deve estar na área atendida.
  */
-export default function PdvPedido({ itens, setItens, onLancado }) {
+export default function PdvPedido({ itens, setItens, onLancado, mobileAberto = false, onFecharMobile }) {
   const [modalidade, setModalidade] = useState('RETIRADA')
   const [nome, setNome] = useState('')
   const [pagamento, setPagamento] = useState('')
@@ -66,7 +66,7 @@ export default function PdvPedido({ itens, setItens, onLancado }) {
     return () => clearTimeout(t)
   }, [modalidade, end.bairro, end.cidade, end.estado])
 
-  const carregarContas = () => mesaAcao.executar(async () => setContas(await get('/api/gestao/caixa/mesas')))
+  const carregarContas = () => mesaAcao.executar(async () => setContas(await get('/api/caixa/contas-mesa')))
   useEffect(() => { if (modalidade === 'MESA' && contas === null) carregarContas() }, [modalidade])
 
   const taxa = modalidade === 'ENTREGA' && area?.atendida ? Number(area.taxaEntrega) : 0
@@ -82,7 +82,7 @@ export default function PdvPedido({ itens, setItens, onLancado }) {
   const abrirMesa = (e) => {
     e.preventDefault()
     mesaAcao.executar(async () => {
-      const c = await post('/api/gestao/caixa/mesas', { nome: nomeMesa.trim() })
+      const c = await post('/api/caixa/contas-mesa', { nome: nomeMesa.trim() })
       setContas((l) => [c, ...(l ?? [])])
       setCodigoConta(c.codigoConta)
       setNovaMesa(false); setNomeMesa('')
@@ -108,15 +108,18 @@ export default function PdvPedido({ itens, setItens, onLancado }) {
       ? { ...base, nomeResponsavel: nome.trim(), endereco: { ...end, estado: end.estado.toUpperCase(), complemento: end.complemento.trim() || null }, metodoPagamento: pagamento || null }
       : modalidade === 'MESA' ? { ...base, codigoConta }
       : { ...base, nomeResponsavel: nome.trim(), metodoPagamento: pagamento || null }
-    const r = await post('/api/gestao/caixa/pedidos', corpo, { 'Idempotency-Key': chave.current })
+    const r = await post('/api/caixa/pedidos', corpo, { 'Idempotency-Key': chave.current })
     chave.current = crypto.randomUUID()
     onLancado(r)
     setNome(''); setPagamento(''); setObservacao(''); setEnd(VAZIO_END); setCepMsg('')
   })
 
   return (
-    <aside className="pdv-pedido cartao">
-      <h2>Pedido</h2>
+    <aside className={`pdv-pedido cartao ${mobileAberto ? 'mobile-aberto' : ''}`}>
+      <div className="pdv-pedido-cabecalho">
+        <h2>Pedido</h2>
+        <button type="button" className="pdv-pedido-fechar" onClick={onFecharMobile} aria-label="Fechar pedido"><Icon nome="x" tamanho={20} /></button>
+      </div>
 
       {itens.length === 0 ? <p className="mudo">Escolha produtos ao lado para montar o pedido.</p> : (
         <ul className="pdv-itens">

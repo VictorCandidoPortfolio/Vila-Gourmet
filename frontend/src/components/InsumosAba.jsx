@@ -75,20 +75,20 @@ export default function InsumosAba() {
         Desativar um insumo desativa as opções que o usam.</p>
       <Erro erro={erro} /><Erro erro={acao.erro} />
       <div className="tabela-rolavel">
-        <table>
+        <table className="tabela-mobile">
           <thead><tr><th>Insumo</th><th>Descrição</th><th>Referência</th><th>Situação</th><th /></tr></thead>
           <tbody>
             {dados?.map((i) => (
               <tr key={i.id} className={`clicavel ${i.disponivel ? '' : 'inativo'}`} onClick={() => setEditando(i)}>
-                <td>
+                <td data-label="Insumo">
                   <span className="produto-celula">
                     <span className="miniatura">{i.imagemUrl ? <img src={miniatura(i.imagemUrl)} alt="" loading="lazy" /> : <Icon nome="camera" tamanho={16} />}</span>
                     <strong>{i.nome}</strong>
                   </span>
                 </td>
-                <td>{i.descricao}</td>
-                <td>{brl(i.valorReferencia)}</td>
-                <td><Chave ligado={i.disponivel} desabilitado={acao.ocupado} aoAlterar={(v) => alternar(i, v)} rotulo={i.disponivel ? 'Disponível' : 'Indisponível'} /></td>
+                <td data-label="Descrição">{i.descricao}</td>
+                <td data-label="Referência">{brl(i.valorReferencia)}</td>
+                <td data-label="Situação"><Chave ligado={i.disponivel} desabilitado={acao.ocupado} aoAlterar={(v) => alternar(i, v)} rotulo={i.disponivel ? 'Disponível' : 'Indisponível'} /></td>
                 <td className="acoes-linha">
                   <MenuAcoes desabilitado={acao.ocupado} rotulo={`Ações de ${i.nome}`}
                     itens={[{ texto: 'Editar', aoClicar: () => setEditando(i) }, { texto: 'Excluir', perigo: true, aoClicar: () => excluir(i) }]} />

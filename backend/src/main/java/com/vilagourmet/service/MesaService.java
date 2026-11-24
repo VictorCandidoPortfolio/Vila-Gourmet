@@ -1,6 +1,7 @@
 package com.vilagourmet.service;
 
 import com.vilagourmet.dto.MesaDTO.AbrirMesaRequest;
+import com.vilagourmet.dto.MesaDTO.AcessoMesaResponse;
 import com.vilagourmet.dto.MesaDTO.ContaMesaResponse;
 import com.vilagourmet.dto.MesaDTO.FechamentoResponse;
 import com.vilagourmet.dto.MesaDTO.HistoricoMesaResponse;
@@ -31,19 +32,24 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Contas de mesa: acumulam vários pedidos (cada um com número e estado próprios) e são pagas no
- * fechamento. O CPF identifica o responsável mas não é chave da conta; o código da conta localiza-a.
+ * fechamento. O CPF identifica o responsável e só pode estar em uma conta ativa; o código localiza-a.
  * Política V1: conta ENCERRADA não é reaberta; um fechamento cancelado devolve a conta a ABERTA.
  */
 @Service
 public class MesaService {
 
     private static final String ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final List<EstadoContaMesa> ESTADOS_ATIVOS =
+            List.of(EstadoContaMesa.ABERTA, EstadoContaMesa.EM_FECHAMENTO);
+    private static final String CONTA_ATIVA =
+            "Já existe uma conta de mesa ativa para este CPF. Use a opção de acessar a conta aberta.";
 
     private final SecureRandom random = new SecureRandom();
     private final ContaMesaRepository contas;
@@ -74,28 +80,49 @@ public class MesaService {
     /** Qualquer pessoa pode iniciar o consumo, sem conta de cliente. */
     @Transactional
     public ContaMesaResponse abrir(AbrirMesaRequest req) {
-        abertura.exigirAberta();
+        abertura.exigirVendasOnline();
+        String cpf = Cpf.exigirValido(req.cpf());
+        exigirSemContaAtiva(cpf);
         ContaMesa c = new ContaMesa();
         c.setNomeResponsavel(req.nome().trim());
-        c.setCpfResponsavel(Cpf.exigirValido(req.cpf()));
+        c.setCpfResponsavel(cpf);
         c.setCodigoConta(gerarCodigo());
-        contas.save(c);
+        salvarNovaConta(c);
         registrarHistorico(c.getId(), null, EstadoContaMesa.ABERTA, null, null);
         return montar(c);
+    }
+
+    /** Recupera no aparelho uma conta ainda ativa usando o CPF do responsável. */
+    @Transactional(readOnly = true)
+    public AcessoMesaResponse acessarPorCpf(String cpfInformado, String ip) {
+        abertura.exigirVendasOnline();
+        String chaveLimite = "mesa-acesso:" + ip;
+        limiter.exigirDisponivel(chaveLimite);
+        String cpf = Cpf.normalizar(cpfInformado);
+        ContaMesa conta = cpf == null ? null
+                : contas.findFirstByCpfResponsavelAndEstadoInOrderByAbertaEmDesc(cpf, ESTADOS_ATIVOS).orElse(null);
+        if (conta == null) {
+            limiter.registrarFalha(chaveLimite);
+            throw new NaoEncontradoException("Não há conta de mesa ativa para este CPF");
+        }
+        limiter.limpar(chaveLimite);
+        return new AcessoMesaResponse(conta.getCodigoConta(), conta.getNomeResponsavel(), conta.getEstado());
     }
 
     /** Funcionário abre a conta de mesa no caixa: só o nome é obrigatório; CPF opcional. */
     @Transactional
     public ContaMesaResponse abrirPeloCaixa(String nome, String cpf) {
-        abertura.exigirAberta();
+        abertura.exigirCaixaAberto();
         if (nome == null || nome.isBlank()) {
             throw new NegocioException("Informe o nome do responsável");
         }
         ContaMesa c = new ContaMesa();
         c.setNomeResponsavel(nome.trim());
-        c.setCpfResponsavel(cpf == null || cpf.isBlank() ? null : Cpf.exigirValido(cpf));
+        String cpfNormalizado = cpf == null || cpf.isBlank() ? null : Cpf.exigirValido(cpf);
+        exigirSemContaAtiva(cpfNormalizado);
+        c.setCpfResponsavel(cpfNormalizado);
         c.setCodigoConta(gerarCodigo());
-        contas.save(c);
+        salvarNovaConta(c);
         registrarHistorico(c.getId(), null, EstadoContaMesa.ABERTA, null, null);
         return montar(c);
     }
@@ -103,6 +130,7 @@ public class MesaService {
     /** Visitante lança pedido informando o código da conta e o CPF do responsável. */
     @Transactional
     public PedidoCriadoResponse pedidoDoResponsavel(String codigo, MesaPedidoRequest req, String ip, String chave) {
+        abertura.exigirVendasOnline();
         String chaveLimite = "mesa:" + ip;
         limiter.exigirDisponivel(chaveLimite);
         ContaMesa c = contas.findByCodigoConta(codigo == null ? "" : codigo.trim().toUpperCase()).orElse(null);
@@ -186,8 +214,26 @@ public class MesaService {
     @Transactional
     public void encerrarSemCobranca(Long contaId, Long funcionarioId, String justificativa) {
         ContaMesa c = contas.findById(contaId).orElseThrow(() -> new NaoEncontradoException("Conta de mesa não encontrada"));
+        encerrarSemCobranca(c, funcionarioId, justificativa);
+    }
+
+    /** Ação manual para corrigir uma conta aberta por engano, sem criar fechamento ou pagamento. */
+    @Transactional
+    public ContaMesaResponse encerrarSemFechamento(String codigo, Long funcionarioId, String justificativa) {
+        ContaMesa c = porCodigo(codigo);
+        encerrarSemCobranca(c, funcionarioId, justificativa);
+        return montar(c);
+    }
+
+    private void encerrarSemCobranca(ContaMesa c, Long funcionarioId, String justificativa) {
         if (c.getEstado() != EstadoContaMesa.ABERTA) {
             throw new NegocioException("Só uma conta aberta pode ser encerrada sem cobrança");
+        }
+        List<Pedido> comConsumo = pedidos.findByContaMesaIdOrderByIdAsc(c.getId()).stream()
+                .filter(p -> p.getEstado() != EstadoPedido.CANCELADO).toList();
+        if (!comConsumo.isEmpty()) {
+            throw new NegocioException(HttpStatus.CONFLICT,
+                    "A conta possui pedidos. Cancele-os ou faça o fechamento antes de encerrar a mesa.");
         }
         c.setEstado(EstadoContaMesa.ENCERRADA);
         c.setEncerradaEm(LocalDateTime.now());
@@ -199,6 +245,21 @@ public class MesaService {
     private ContaMesa porCodigo(String codigo) {
         return contas.findByCodigoConta(codigo == null ? "" : codigo.trim().toUpperCase())
                 .orElseThrow(() -> new NaoEncontradoException("Conta de mesa não encontrada"));
+    }
+
+    private void exigirSemContaAtiva(String cpf) {
+        if (cpf != null && contas.existsByCpfResponsavelAndEstadoIn(cpf, ESTADOS_ATIVOS)) {
+            throw new NegocioException(HttpStatus.CONFLICT, CONTA_ATIVA);
+        }
+    }
+
+    /** O índice único no banco fecha a janela de corrida entre duas aberturas simultâneas. */
+    private void salvarNovaConta(ContaMesa conta) {
+        try {
+            contas.saveAndFlush(conta);
+        } catch (DataIntegrityViolationException e) {
+            throw new NegocioException(HttpStatus.CONFLICT, CONTA_ATIVA);
+        }
     }
 
     private ContaMesaResponse montar(ContaMesa c) {

@@ -5,8 +5,8 @@ const LojaContext = createContext({ aberta: true, carregado: false })
 export const useLoja = () => useContext(LojaContext)
 
 /**
- * Situação da pizzaria (aberta = há um caixa aberto), atualizada a cada 30 s. O servidor também bloqueia
- * as vendas com a loja fechada; isto só serve para avisar e desabilitar os botões. Enquanto não se sabe, vale "aberta".
+ * Disponibilidade das vendas online, atualizada a cada 30 s. Além do caixa aberto, a sessão precisa ter
+ * liberado o site; o servidor revalida isso ao criar o pedido. Enquanto não se sabe, vale "aberta".
  */
 export function LojaProvider({ children }) {
   const [estado, setEstado] = useState({ aberta: true, carregado: false })
